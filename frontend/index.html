@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Альфа-Банк - Банкомат</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="atm-container">
+        <div class="atm-header">
+            <div class="atm-logo">АЛЬФА-БАНК</div>
+            <div class="atm-subtitle">Банкомат самообслуживания</div>
+        </div>
+
+        <!-- Главное меню -->
+        <div class="main-menu" id="mainMenu">
+            <button class="menu-btn" onclick="showScreen('balance')">
+                <span class="menu-icon">💰</span>
+                Баланс
+            </button>
+            <button class="menu-btn" onclick="showScreen('withdraw')">
+                <span class="menu-icon">💵</span>
+                Снятие наличных
+            </button>
+            <button class="menu-btn" onclick="showScreen('deposit')">
+                <span class="menu-icon">📥</span>
+                Внесение средств
+            </button>
+            <button class="menu-btn" onclick="showScreen('voice')">
+                <span class="menu-icon">🎤</span>
+                Голосовой помощник
+            </button>
+            <button class="menu-btn" onclick="showScreen('transfer')">
+                <span class="menu-icon">↔️</span>
+                Переводы
+            </button>
+            <button class="menu-btn" onclick="showScreen('settings')">
+                <span class="menu-icon">⚙️</span>
+                Настройки
+            </button>
+        </div>
+
+        <!-- Экран голосового помощника -->
+        <div class="voice-assistant-screen" id="voiceScreen">  <!-- Убрал класс active -->
+            <div class="screen-header">
+                <button class="back-btn" onclick="showMainMenu()">← Назад</button>
+                <h2 style="color: #EF3124; margin: 0;">Голосовой помощник</h2>
+                <div style="width: 100px;"></div>
+            </div>
+
+            <div class="status idle" id="status">
+                Готов к работе
+            </div>
+
+            <div class="button-container">
+                <button class="record-btn" id="recordBtn" title="Нажмите для начала записи, нажмите еще раз для остановки">
+                    🎤
+                </button>
+            </div>
+
+            <div class="instruction">
+                Нажмите кнопку микрофона для начала записи, нажмите еще раз для остановки
+            </div>
+
+            <div class="error" id="error"></div>
+        </div>
+
+        <!-- Остальные экраны остаются без изменений -->
+        <!-- ... -->
+    </div>
+
+    <script>
+        // Автоматическое определение URL API на основе текущего хоста
+        const API_URL = window.location.origin + '/api';
+        let mediaRecorder;
+        let audioChunks = [];
+        let currentAudioBlob = null;
+        let recordingStartTime = null;
+        let recordingTimer = null;
+
+        const recordBtn = document.getElementById('recordBtn');
+        const status = document.getElementById('status');
+        const errorDiv = document.getElementById('error');
+        const mainMenu = document.getElementById('mainMenu');
+        const voiceScreen = document.getElementById('voiceScreen');
+        let isRecording = false;
+
+        // Функции для операций
+        function withdraw() {
+            const amount = document.getElementById('withdrawAmount').value;
+            if (!amount || amount <= 0) {
+                showError('Введите корректную сумму');
+                return;
+            }
+            showError('Операция снятия ' + amount + ' ₽ выполнена успешно');
+            document.getElementById('withdrawAmount').value = '';
+        }
+
+        function deposit() {
+            const amount = document.getElementById('depositAmount').value;
+            if (!amount || amount <= 0) {
+                showError('Введите корректную сумму');
+                return;
+            }
+            showError('Средства ' + amount + ' ₽ внесены успешно');
+            document.getElementById('depositAmount').value = '';
+        }
+
+        function transfer() {
+            const recipient = document.getElementById('recipient').value;
+            const amount = document.getElementById('transferAmount').value;
+            if (!recipient || !amount || amount <= 0) {
+                showError('Введите получателя и корректную сумму');
+                return;
+            }
+            showError('Перевод ' + amount + ' ₽ на ' + recipient + ' выполнен успешно');
+            document.getElementById('recipient').value = '';
+            document.getElementById('transferAmount').value = '';
+        }
+
+        // Переключение темы
+        function toggleTheme() {
+            const body = document.body;
+            const toggleBtn = document.getElementById('themeToggle');
+            if (body.classList.contains('light')) {
+                body.classList.remove('light');
+                toggleBtn.textContent = 'Светлая';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.classList.add('light');
+                toggleBtn.textContent = 'Темная';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        // Загрузка темы при старте
+        function loadTheme() {
+            const theme = localStorage.getItem('theme');
+            const toggleBtn = document.getElementById('themeToggle');
+            if (theme === 'light') {
+                document.body.classList.add('light');
+                toggleBtn.textContent = 'Темная';
+            } else {
+                toggleBtn.textContent = 'Светлая';
+            }
+        }
+
+        // Показ главного меню
+        function showMainMenu() {
+            mainMenu.style.display = 'grid';
+            // Скрываем все экраны
+            document.querySelectorAll('.screen, .voice-assistant-screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            // Сбрасываем активную кнопку
+            document.querySelectorAll('.menu-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        // Показ экрана функции
+        function showScreen(screenName) {
+            mainMenu.style.display = 'none';
+            // Скрываем все экраны
+            document.querySelectorAll('.screen, .voice-assistant-screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            // Показываем выбранный экран
+            if (screenName === 'voice') {
+                voiceScreen.classList.add('active');
+            } else if (screenName === 'balance') {
+                document.getElementById('balanceScreen').classList.add('active');
+            } else if (screenName === 'withdraw') {
+                document.getElementById('withdrawScreen').classList.add('active');
+            } else if (screenName === 'deposit') {
+                document.getElementById('depositScreen').classList.add('active');
+            } else if (screenName === 'transfer') {
+                document.getElementById('transferScreen').classList.add('active');
+            } else if (screenName === 'settings') {
+                document.getElementById('settingsScreen').classList.add('active');
+            }
+            // Устанавливаем активную кнопку
+            document.querySelectorAll('.menu-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const activeBtn = document.querySelector(`[onclick="showScreen('${screenName}')"]`);
+            if (activeBtn) activeBtn.classList.add('active');
+        }
+
+        // Инициализация записи
+        async function initRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+                
+                // Определяем поддерживаемый формат
+                const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
+                    ? 'audio/webm' 
+                    : MediaRecorder.isTypeSupported('audio/ogg') 
+                    ? 'audio/ogg' 
+                    : 'audio/wav';
+                
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: mimeType,
+                    audioBitsPerSecond: 128000
+                });
+                
+                // Собираем данные каждые 100ms для более надежной записи
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data && event.data.size > 0) {
+                        audioChunks.push(event.data);
+                        console.log('Audio chunk received:', event.data.size, 'bytes');
+                    }
+                };
+
+                mediaRecorder.onstop = async () => {
+                    // Останавливаем таймер если он еще работает
+                    if (recordingTimer) {
+                        clearInterval(recordingTimer);
+                        recordingTimer = null;
+                    }
+                    
+                    console.log('Recording stopped. Total chunks:', audioChunks.length);
+                    isRecording = false;
+                    
+                    if (audioChunks.length === 0) {
+                        showError('Запись не удалась. Попробуйте еще раз.');
+                        status.textContent = 'Готов к работе';
+                        status.className = 'status idle';
+                        recordBtn.disabled = false;
+                        recordingStartTime = null;
+                        return;
+                    }
+                    
+                    const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+                    console.log('Audio blob size:', audioBlob.size, 'bytes');
+                    
+                    // Проверяем минимальный размер (хотя бы 1KB)
+                    if (audioBlob.size < 1024) {
+                        showError('Запись слишком короткая. Пожалуйста, говорите дольше (минимум 1-2 секунды).');
+                        status.textContent = 'Готов к работе';
+                        status.className = 'status idle';
+                        recordBtn.disabled = false;
+                        audioChunks = [];
+                        recordingStartTime = null;
+                        return;
+                    }
+                    
+                    await processAudio(audioBlob);
+                    audioChunks = [];
+                    recordingStartTime = null;
+                };
+                
+                mediaRecorder.onerror = (event) => {
+                    console.error('MediaRecorder error:', event);
+                    isRecording = false;
+                    if (recordingTimer) {
+                        clearInterval(recordingTimer);
+                        recordingTimer = null;
+                    }
+                    showError('Ошибка записи. Попробуйте еще раз.');
+                    status.textContent = 'Готов к работе';
+                    status.className = 'status idle';
+                    recordBtn.disabled = false;
+                    recordBtn.classList.remove('recording');
+                };
+            } catch (err) {
+                showError('Ошибка доступа к микрофону. Пожалуйста, разрешите доступ к микрофону в настройках браузера.');
+                console.error('Microphone error:', err);
+            }
+        }
+
+        // Toggle запись по клику
+        recordBtn.addEventListener('click', () => {
+            if (!mediaRecorder) {
+                showError('Микрофон не инициализирован. Обновите страницу.');
+                return;
+            }
+            
+            if (mediaRecorder.state === 'inactive' && !isRecording) {
+                // Начало записи
+                audioChunks = [];
+                mediaRecorder.start(100);
+                recordBtn.classList.add('recording');
+                status.className = 'status recording';
+                errorDiv.classList.remove('show');
+                isRecording = true;
+                console.log('Recording started');
+                
+                // Запускаем таймер для отображения времени записи
+                recordingStartTime = Date.now();
+                recordingTimer = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                    status.textContent = `Запись... ${elapsed} сек`;
+                }, 100);
+            } else if (mediaRecorder.state === 'recording' && isRecording) {
+                // Остановка записи
+                console.log('Stopping recording...');
+                
+                // Останавливаем таймер
+                if (recordingTimer) {
+                    clearInterval(recordingTimer);
+                    recordingTimer = null;
+                }
+                
+                const recordingDuration = recordingStartTime ? Math.floor((Date.now() - recordingStartTime) / 1000) : 0;
+                console.log('Recording duration:', recordingDuration, 'seconds');
+                
+                mediaRecorder.stop();
+                recordBtn.classList.remove('recording');
+                status.textContent = 'Обработка...';
+                status.className = 'status processing';
+                recordBtn.disabled = true;
+                isRecording = false;
+                recordingStartTime = null;
+            }
+        });
+
+        // Конвертация аудио в WAV
+        async function convertToWav(audioBlob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        const arrayBuffer = e.target.result;
+                        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                        
+                        // Конвертируем в WAV
+                        const wav = audioBufferToWav(audioBuffer);
+                        const wavBlob = new Blob([wav], { type: 'audio/wav' });
+                        resolve(wavBlob);
+                    } catch (err) {
+                        console.warn('Не удалось конвертировать аудио, отправляем оригинал:', err);
+                        resolve(audioBlob);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(audioBlob);
+            });
+        }
+
+        // Функция конвертации AudioBuffer в WAV
+        function audioBufferToWav(buffer) {
+            const length = buffer.length;
+            const sampleRate = buffer.sampleRate;
+            const numChannels = buffer.numberOfChannels;
+            const bytesPerSample = 2;
+            const blockAlign = numChannels * bytesPerSample;
+            const byteRate = sampleRate * blockAlign;
+            const dataSize = length * blockAlign;
+            const bufferSize = 44 + dataSize;
+            const arrayBuffer = new ArrayBuffer(bufferSize);
+            const view = new DataView(arrayBuffer);
+            
+            // WAV заголовок
+            const writeString = (offset, string) => {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            };
+            
+            writeString(0, 'RIFF');
+            view.setUint32(4, bufferSize - 8, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bytesPerSample * 8, true);
+            writeString(36, 'data');
+            view.setUint32(40, dataSize, true);
+            
+            // Данные
+            let offset = 44;
+            for (let i = 0; i < length; i++) {
+                for (let channel = 0; channel < numChannels; channel++) {
+                    const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
+                    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                    offset += 2;
+                }
+            }
+            
+            return arrayBuffer;
+        }
+
+        // Обработка аудио
+        async function processAudio(audioBlob) {
+            try {
+                console.log('Processing audio. Original size:', audioBlob.size, 'bytes, type:', audioBlob.type);
+                
+                // Конвертируем в WAV если нужно
+                let wavBlob = audioBlob;
+                if (!audioBlob.type.includes('wav')) {
+                    console.log('Converting to WAV...');
+                    wavBlob = await convertToWav(audioBlob);
+                    console.log('Converted WAV size:', wavBlob.size, 'bytes');
+                }
+                
+                // Финальная проверка размера
+                if (wavBlob.size < 1024) {
+                    throw new Error('Запись слишком короткая. Пожалуйста, говорите дольше (минимум 1 секунда).');
+                }
+                
+                const formData = new FormData();
+                formData.append('audio', wavBlob, 'recording.wav');
+                console.log('Sending audio to server. Size:', wavBlob.size, 'bytes');
+
+                const response = await fetch(`${API_URL}/voice-assistant`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    let errorMessage = 'Ошибка обработки запроса';
+                    try {
+                        const error = await response.json();
+                        errorMessage = error.error || error.details || errorMessage;
+                        console.error('Server error:', error);
+                    } catch (e) {
+                        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                        console.error('Failed to parse error response:', e);
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                const result = await response.json();
+
+                // Конвертируем base64 обратно в blob и автоматически воспроизводим
+                if (result.audio) {
+                    const base64Audio = result.audio;
+                    const binaryString = atob(base64Audio);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    currentAudioBlob = new Blob([bytes], { type: 'audio/wav' });
+                    
+                    // Автоматически воспроизводим ответ
+                    playAudio(currentAudioBlob);
+                } else {
+                    status.textContent = 'Готов к работе';
+                    status.className = 'status idle';
+                    recordBtn.disabled = false;
+                }
+            } catch (err) {
+                isRecording = false;
+                showError(err.message);
+                status.textContent = 'Готов к работе';
+                status.className = 'status idle';
+                recordBtn.disabled = false;
+                recordBtn.classList.remove('recording');
+            }
+        }
+
+        // Воспроизведение аудио
+        function playAudio(audioBlob) {
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            
+            status.textContent = 'Воспроизведение ответа...';
+            status.className = 'status playing';
+            
+            audio.play().catch(err => {
+                console.error('Error playing audio:', err);
+                showError('Ошибка воспроизведения аудио');
+                status.textContent = 'Готов к работе';
+                status.className = 'status idle';
+                recordBtn.disabled = false;
+            });
+            
+            audio.onended = () => {
+                status.textContent = 'Готов к работе';
+                status.className = 'status idle';
+                recordBtn.disabled = false;
+                URL.revokeObjectURL(audioUrl);
+            };
+            
+            audio.onerror = () => {
+                showError('Ошибка воспроизведения аудио');
+                status.textContent = 'Готов к работе';
+                status.className = 'status idle';
+                recordBtn.disabled = false;
+                URL.revokeObjectURL(audioUrl);
+            };
+        }
+
+        // Показ ошибки
+        function showError(message) {
+            errorDiv.textContent = 'Ошибка: ' + message;
+            errorDiv.classList.add('show');
+            setTimeout(() => {
+                errorDiv.classList.remove('show');
+            }, 5000);
+        }
+
+        // Инициализация при загрузке
+        initRecording();
+        loadTheme();
+    </script>
+</body>
+</html>
