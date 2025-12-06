@@ -103,7 +103,7 @@
         }
 
         .main-menu {
-            display: grid;
+            display: none;
             grid-template-columns: repeat(2, 1fr);
             gap: 20px;
             margin-bottom: 30px;
@@ -197,12 +197,37 @@
         }
 
         .screen {
-            display: none;
+            display: none !important;
             animation: fadeIn 0.5s;
         }
 
         .screen.active {
-            display: block;
+            display: block !important;
+        }
+
+        .welcome-screen {
+            display: none !important;
+        }
+
+        .welcome-screen.active {
+            display: flex !important;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            text-align: center;
+        }
+
+        .feedback-screen {
+            display: none !important;
+        }
+
+        .feedback-screen.active {
+            display: flex !important;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
         }
 
         @keyframes fadeIn {
@@ -624,6 +649,94 @@
             margin-top: 15px;
             font-style: italic;
         }
+
+
+        .welcome-title {
+            font-size: 2.5em;
+            color: var(--accent-color);
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.2em;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+        }
+
+        .start-btn {
+            padding: 20px 60px;
+            font-size: 1.5em;
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-color-light) 100%);
+            color: #fff;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: 600;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(239, 49, 36, 0.4);
+        }
+
+        .start-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(239, 49, 36, 0.6);
+        }
+
+        .rating-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .rating-label {
+            font-size: 1.3em;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .rating-buttons {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .rating-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid var(--accent-color);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-size: 1.3em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .rating-btn:hover {
+            transform: scale(1.1);
+            background: var(--accent-color);
+            color: #fff;
+        }
+
+        .rating-btn.selected {
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-color-light) 100%);
+            color: #fff;
+            border-color: var(--accent-color-light);
+            box-shadow: 0 0 20px rgba(239, 49, 36, 0.5);
+        }
+
+
+        .thank-you-message {
+            font-size: 1.5em;
+            color: var(--accent-color);
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -633,8 +746,15 @@
             <div class="atm-subtitle">Банкомат самообслуживания</div>
         </div>
 
+        <!-- Начальный экран -->
+        <div class="screen welcome-screen active" id="welcomeScreen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; text-align: center;">
+            <div class="welcome-title">Добро пожаловать!</div>
+            <div class="welcome-subtitle">Выберите операцию для начала работы</div>
+            <button class="start-btn" onclick="startService()">Начать обслуживание</button>
+        </div>
+
         <!-- Главное меню -->
-        <div class="main-menu" id="mainMenu">
+        <div class="main-menu" id="mainMenu" style="display: none;">
             <button class="menu-btn" onclick="showScreen('balance', this)">
                 <span class="menu-icon">
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -683,6 +803,42 @@
                 </span>
                 Настройки
             </button>
+            <button class="menu-btn" onclick="showFeedbackScreen()" style="grid-column: 1 / -1;">
+                <span class="menu-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </span>
+                Уйти
+            </button>
+        </div>
+
+        <!-- Экран обратной связи -->
+        <div class="screen feedback-screen" id="feedbackScreen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px;">
+            <div class="screen-header">
+                <div style="width: 100px;"></div>
+                <h2 class="screen-title">Обратная связь</h2>
+                <div style="width: 100px;"></div>
+            </div>
+            <div class="screen-content">
+                <div class="rating-label">Оцените качество обслуживания</div>
+                <div class="rating-buttons" id="ratingButtons">
+                    <button class="rating-btn" onclick="selectRating(1)">1</button>
+                    <button class="rating-btn" onclick="selectRating(2)">2</button>
+                    <button class="rating-btn" onclick="selectRating(3)">3</button>
+                    <button class="rating-btn" onclick="selectRating(4)">4</button>
+                    <button class="rating-btn" onclick="selectRating(5)">5</button>
+                    <button class="rating-btn" onclick="selectRating(6)">6</button>
+                    <button class="rating-btn" onclick="selectRating(7)">7</button>
+                    <button class="rating-btn" onclick="selectRating(8)">8</button>
+                    <button class="rating-btn" onclick="selectRating(9)">9</button>
+                    <button class="rating-btn" onclick="selectRating(10)">10</button>
+                </div>
+                <div class="thank-you-message" id="thankYouMessage" style="display: none;">
+                    Спасибо за вашу оценку!
+                </div>
+                <button class="action-btn" onclick="exitService()" id="exitBtn">Уйти</button>
+            </div>
         </div>
 
         <!-- Экран баланса -->
@@ -839,22 +995,110 @@
         let currentAudioBlob = null;
         let recordingStartTime = null;
         let recordingTimer = null;
+        let audioContext = null;
+        let mediaStream = null;
+        let audioWorkletNode = null;
+        let audioBuffer = [];
+        let useWebAudioFallback = false;
 
         const recordBtn = document.getElementById('recordBtn');
         const status = document.getElementById('status');
         const errorDiv = document.getElementById('error');
         const mainMenu = document.getElementById('mainMenu');
         const voiceScreen = document.getElementById('voiceScreen');
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const feedbackScreen = document.getElementById('feedbackScreen');
         let isRecording = false;
+        let selectedRating = null;
 
-        // Показ главного меню
-        function showMainMenu() {
-            mainMenu.style.display = 'grid';
+        // Начало обслуживания
+        function startService() {
             // Скрываем все экраны
             document.querySelectorAll('.screen').forEach(screen => {
                 screen.classList.remove('active');
             });
+            welcomeScreen.classList.remove('active');
+            feedbackScreen.classList.remove('active');
+            // Показываем главное меню
+            mainMenu.style.display = 'grid';
+        }
+
+        // Показ главного меню
+        function showMainMenu() {
+            // Скрываем все экраны (включая welcome и feedback)
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            welcomeScreen.classList.remove('active');
+            feedbackScreen.classList.remove('active');
+            // Показываем главное меню
+            mainMenu.style.display = 'grid';
             // Сбрасываем активную кнопку
+            document.querySelectorAll('.menu-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        // Показ экрана обратной связи
+        function showFeedbackScreen() {
+            // Скрываем все экраны
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            welcomeScreen.classList.remove('active');
+            // Скрываем главное меню
+            mainMenu.style.display = 'none';
+            // Показываем экран обратной связи
+            feedbackScreen.classList.add('active');
+            // Сбрасываем выбор оценки
+            selectedRating = null;
+            document.querySelectorAll('.rating-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.getElementById('thankYouMessage').style.display = 'none';
+        }
+
+        // Выбор оценки
+        function selectRating(rating) {
+            selectedRating = rating;
+            // Обновляем визуальное состояние кнопок
+            document.querySelectorAll('.rating-btn').forEach((btn, index) => {
+                if (index + 1 === rating) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+            // Показываем сообщение благодарности
+            document.getElementById('thankYouMessage').style.display = 'block';
+            console.log('Оценка:', rating);
+        }
+
+        // Выход из обслуживания
+        function exitService() {
+            // Отправляем оценку на сервер (если выбрана)
+            if (selectedRating) {
+                // Здесь можно отправить оценку на сервер
+                console.log('Отправка оценки на сервер:', selectedRating);
+            }
+            
+            // Скрываем все экраны и меню
+            feedbackScreen.classList.remove('active');
+            mainMenu.style.display = 'none';
+            document.querySelectorAll('.screen').forEach(screen => {
+                if (screen.id !== 'welcomeScreen') {
+                    screen.classList.remove('active');
+                }
+            });
+            
+            // Показываем начальный экран
+            welcomeScreen.classList.add('active');
+            
+            // Сбрасываем все состояния
+            selectedRating = null;
+            document.querySelectorAll('.rating-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
             document.querySelectorAll('.menu-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
@@ -862,15 +1106,26 @@
 
         // Показ экрана функции
         function showScreen(screenName, buttonElement) {
+            // Скрываем начальный экран и экран обратной связи
+            welcomeScreen.classList.remove('active');
+            feedbackScreen.classList.remove('active');
+            // Скрываем главное меню
             mainMenu.style.display = 'none';
-            // Скрываем все экраны
+            // Скрываем все остальные экраны
             document.querySelectorAll('.screen').forEach(screen => {
-                screen.classList.remove('active');
+                if (screen.id !== 'welcomeScreen' && screen.id !== 'feedbackScreen') {
+                    screen.classList.remove('active');
+                }
             });
             // Показываем нужный экран
             const screen = document.getElementById(screenName + 'Screen');
             if (screen) {
                 screen.classList.add('active');
+                
+                // Инициализируем микрофон при открытии экрана голосового помощника
+                if (screenName === 'voice' && !mediaRecorder && !audioContext) {
+                    initRecording();
+                }
             }
             // Обновляем активную кнопку
             document.querySelectorAll('.menu-btn').forEach(btn => {
@@ -946,140 +1201,422 @@
             }
         }
 
+        // Проверка поддержки MediaRecorder
+        function checkMediaRecorderSupport() {
+            if (typeof MediaRecorder === 'undefined') {
+                return false;
+            }
+            
+            // Safari может иметь MediaRecorder, но не поддерживать все форматы
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            
+            if (isSafari || isIOS) {
+                // Проверяем реальную поддержку
+                try {
+                    const testRecorder = new MediaRecorder(new MediaStream());
+                    return testRecorder && typeof testRecorder.start === 'function';
+                } catch (e) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+
         // Инициализация записи
         async function initRecording() {
             try {
+                // Проверяем поддержку getUserMedia
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    // Fallback для старых браузеров
+                    navigator.mediaDevices = navigator.mediaDevices || {};
+                    navigator.mediaDevices.getUserMedia = navigator.mediaDevices.getUserMedia ||
+                        navigator.webkitGetUserMedia ||
+                        navigator.mozGetUserMedia ||
+                        navigator.msGetUserMedia;
+                    
+                    if (!navigator.mediaDevices.getUserMedia) {
+                        throw new Error('Ваш браузер не поддерживает запись аудио');
+                    }
+                }
+
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
                         sampleRate: 16000,
                         channelCount: 1,
                         echoCancellation: true,
-                        noiseSuppression: true
+                        noiseSuppression: true,
+                        autoGainControl: true
                     }
                 });
                 
-                // Определяем поддерживаемый формат
-                const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
-                    ? 'audio/webm' 
-                    : MediaRecorder.isTypeSupported('audio/ogg') 
-                    ? 'audio/ogg' 
-                    : 'audio/wav';
+                mediaStream = stream;
                 
-                mediaRecorder = new MediaRecorder(stream, {
-                    mimeType: mimeType,
-                    audioBitsPerSecond: 128000
-                });
+                // Проверяем поддержку MediaRecorder
+                if (checkMediaRecorderSupport()) {
+                    useWebAudioFallback = false;
+                    await initMediaRecorder(stream);
+                } else {
+                    // Используем Web Audio API как fallback для Safari
+                    useWebAudioFallback = true;
+                    await initWebAudioRecorder(stream);
+                }
                 
-                // Собираем данные каждые 100ms для более надежной записи
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data && event.data.size > 0) {
-                        audioChunks.push(event.data);
-                        console.log('Audio chunk received:', event.data.size, 'bytes');
-                    }
-                };
-
-                mediaRecorder.onstop = async () => {
-                    // Останавливаем таймер если он еще работает
-                    if (recordingTimer) {
-                        clearInterval(recordingTimer);
-                        recordingTimer = null;
-                    }
-                    
-                    console.log('Recording stopped. Total chunks:', audioChunks.length);
-                    isRecording = false;
-                    
-                    if (audioChunks.length === 0) {
-                        showError('Запись не удалась. Попробуйте еще раз.');
-                        status.textContent = 'Готов к работе';
-                        status.className = 'status idle';
-                        recordBtn.disabled = false;
-                        recordingStartTime = null;
-                        return;
-                    }
-                    
-                    const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
-                    console.log('Audio blob size:', audioBlob.size, 'bytes');
-                    
-                    // Проверяем минимальный размер (хотя бы 1KB)
-                    if (audioBlob.size < 1024) {
-                        showError('Запись слишком короткая. Пожалуйста, говорите дольше (минимум 1-2 секунды).');
-                        status.textContent = 'Готов к работе';
-                        status.className = 'status idle';
-                        recordBtn.disabled = false;
-                        audioChunks = [];
-                        recordingStartTime = null;
-                        return;
-                    }
-                    
-                    await processAudio(audioBlob);
-                    audioChunks = [];
-                    recordingStartTime = null;
-                };
-                
-                mediaRecorder.onerror = (event) => {
-                    console.error('MediaRecorder error:', event);
-                    isRecording = false;
-                    if (recordingTimer) {
-                        clearInterval(recordingTimer);
-                        recordingTimer = null;
-                    }
-                    showError('Ошибка записи. Попробуйте еще раз.');
-                    status.textContent = 'Готов к работе';
-                    status.className = 'status idle';
-                    recordBtn.disabled = false;
-                    recordBtn.classList.remove('recording');
-                };
             } catch (err) {
-                showError('Ошибка доступа к микрофону. Пожалуйста, разрешите доступ к микрофону в настройках браузера.');
-                console.error('Microphone error:', err);
+                console.error('Microphone initialization error:', err);
+                let errorMessage = 'Ошибка доступа к микрофону. ';
+                
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    errorMessage += 'Пожалуйста, разрешите доступ к микрофону в настройках браузера.';
+                } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                    errorMessage += 'Микрофон не найден. Проверьте подключение устройства.';
+                } else if (err.name === 'NotSupportedError') {
+                    errorMessage += 'Ваш браузер не поддерживает запись аудио. Попробуйте использовать Chrome или Firefox.';
+                } else {
+                    errorMessage += err.message || 'Попробуйте обновить страницу.';
+                }
+                
+                showError(errorMessage);
             }
         }
 
-        // Toggle запись по клику
-        recordBtn.addEventListener('click', () => {
-            if (!mediaRecorder) {
-                showError('Микрофон не инициализирован. Обновите страницу.');
+        // Инициализация MediaRecorder (для Chrome, Firefox и др.)
+        async function initMediaRecorder(stream) {
+            // Определяем поддерживаемый формат
+            let mimeType = 'audio/webm';
+            if (!MediaRecorder.isTypeSupported('audio/webm')) {
+                if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                    mimeType = 'audio/mp4';
+                } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+                    mimeType = 'audio/ogg';
+                } else if (MediaRecorder.isTypeSupported('audio/wav')) {
+                    mimeType = 'audio/wav';
+                } else {
+                    // Используем формат по умолчанию
+                    mimeType = '';
+                }
+            }
+            
+            const options = {};
+            if (mimeType) {
+                options.mimeType = mimeType;
+            }
+            options.audioBitsPerSecond = 128000;
+            
+            mediaRecorder = new MediaRecorder(stream, options);
+            
+            // Собираем данные каждые 100ms для более надежной записи
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data && event.data.size > 0) {
+                    audioChunks.push(event.data);
+                    console.log('Audio chunk received:', event.data.size, 'bytes');
+                }
+            };
+
+            mediaRecorder.onstop = async () => {
+                await handleRecordingStop();
+            };
+            
+            mediaRecorder.onerror = (event) => {
+                console.error('MediaRecorder error:', event);
+                handleRecordingError();
+            };
+        }
+
+        // Инициализация Web Audio API (для Safari)
+        async function initWebAudioRecorder(stream) {
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextClass) {
+                    throw new Error('Web Audio API не поддерживается');
+                }
+                
+                audioContext = new AudioContextClass({ sampleRate: 16000 });
+                const source = audioContext.createMediaStreamSource(stream);
+                
+                // Создаем ScriptProcessorNode для записи (deprecated, но работает в Safari)
+                const bufferSize = 4096;
+                const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+                
+                processor.onaudioprocess = (e) => {
+                    if (isRecording) {
+                        const inputData = e.inputBuffer.getChannelData(0);
+                        const buffer = new Float32Array(inputData.length);
+                        for (let i = 0; i < inputData.length; i++) {
+                            buffer[i] = inputData[i];
+                        }
+                        audioBuffer.push(buffer);
+                    }
+                };
+                
+                source.connect(processor);
+                processor.connect(audioContext.destination);
+                
+                // Сохраняем ссылку для остановки
+                audioWorkletNode = processor;
+                
+                console.log('Web Audio API recorder initialized for Safari');
+            } catch (err) {
+                console.error('Web Audio API initialization error:', err);
+                throw err;
+            }
+        }
+
+        // Обработка остановки записи
+        async function handleRecordingStop() {
+            // Останавливаем таймер если он еще работает
+            if (recordingTimer) {
+                clearInterval(recordingTimer);
+                recordingTimer = null;
+            }
+            
+            isRecording = false;
+            
+            let audioBlob;
+            
+            if (useWebAudioFallback) {
+                // Конвертируем аудио буфер в WAV для Safari
+                audioBlob = await convertAudioBufferToWAV();
+                audioBuffer = [];
+            } else {
+                console.log('Recording stopped. Total chunks:', audioChunks.length);
+                
+                if (audioChunks.length === 0) {
+                    showError('Запись не удалась. Попробуйте еще раз.');
+                    status.textContent = 'Готов к работе';
+                    status.className = 'status idle';
+                    recordBtn.disabled = false;
+                    recordingStartTime = null;
+                    return;
+                }
+                
+                audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+                console.log('Audio blob size:', audioBlob.size, 'bytes');
+            }
+            
+            // Проверяем минимальный размер (хотя бы 1KB)
+            if (audioBlob.size < 1024) {
+                showError('Запись слишком короткая. Пожалуйста, говорите дольше (минимум 1-2 секунды).');
+                status.textContent = 'Готов к работе';
+                status.className = 'status idle';
+                recordBtn.disabled = false;
+                audioChunks = [];
+                audioBuffer = [];
+                recordingStartTime = null;
                 return;
             }
             
-            if (mediaRecorder.state === 'inactive' && !isRecording) {
-                // Начало записи
-                audioChunks = [];
-                mediaRecorder.start(100);
-                recordBtn.classList.add('recording');
-                status.className = 'status recording';
-                errorDiv.classList.remove('show');
-                isRecording = true;
-                console.log('Recording started');
-                
-                // Запускаем таймер для отображения времени записи
-                recordingStartTime = Date.now();
-                recordingTimer = setInterval(() => {
-                    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
-                    status.textContent = `Запись... ${elapsed} сек`;
-                }, 100);
-            } else if (mediaRecorder.state === 'recording' && isRecording) {
-                // Остановка записи
-                console.log('Stopping recording...');
-                
-                // Останавливаем таймер
-                if (recordingTimer) {
-                    clearInterval(recordingTimer);
-                    recordingTimer = null;
-                }
-                
-                const recordingDuration = recordingStartTime ? Math.floor((Date.now() - recordingStartTime) / 1000) : 0;
-                console.log('Recording duration:', recordingDuration, 'seconds');
-                
-                mediaRecorder.stop();
-                recordBtn.classList.remove('recording');
-                status.textContent = 'Обработка...';
-                status.className = 'status processing';
-                recordBtn.disabled = true;
-                isRecording = false;
-                recordingStartTime = null;
+            await processAudio(audioBlob);
+            audioChunks = [];
+            audioBuffer = [];
+            recordingStartTime = null;
+        }
+
+        // Конвертация аудио буфера в WAV (для Safari)
+        async function convertAudioBufferToWAV() {
+            if (!audioBuffer || audioBuffer.length === 0) {
+                throw new Error('Нет данных для конвертации');
             }
-        });
+            
+            // Объединяем все буферы
+            let totalLength = 0;
+            for (let i = 0; i < audioBuffer.length; i++) {
+                totalLength += audioBuffer[i].length;
+            }
+            
+            const mergedBuffer = new Float32Array(totalLength);
+            let bufferOffset = 0;
+            for (let i = 0; i < audioBuffer.length; i++) {
+                mergedBuffer.set(audioBuffer[i], bufferOffset);
+                bufferOffset += audioBuffer[i].length;
+            }
+            
+            // Конвертируем в 16-bit PCM
+            const sampleRate = 16000;
+            const numChannels = 1;
+            const bytesPerSample = 2;
+            const blockAlign = numChannels * bytesPerSample;
+            const byteRate = sampleRate * blockAlign;
+            const dataSize = mergedBuffer.length * blockAlign;
+            const bufferSize = 44 + dataSize;
+            const arrayBuffer = new ArrayBuffer(bufferSize);
+            const view = new DataView(arrayBuffer);
+            
+            // WAV заголовок
+            const writeString = (pos, string) => {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(pos + i, string.charCodeAt(i));
+                }
+            };
+            
+            writeString(0, 'RIFF');
+            view.setUint32(4, bufferSize - 8, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bytesPerSample * 8, true);
+            writeString(36, 'data');
+            view.setUint32(40, dataSize, true);
+            
+            // Данные
+            let offset = 44;
+            for (let i = 0; i < mergedBuffer.length; i++) {
+                const sample = Math.max(-1, Math.min(1, mergedBuffer[i]));
+                view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                offset += 2;
+            }
+            
+            return new Blob([arrayBuffer], { type: 'audio/wav' });
+        }
+
+        // Обработка ошибок записи
+        function handleRecordingError() {
+            isRecording = false;
+            if (recordingTimer) {
+                clearInterval(recordingTimer);
+                recordingTimer = null;
+            }
+            showError('Ошибка записи. Попробуйте еще раз.');
+            status.textContent = 'Готов к работе';
+            status.className = 'status idle';
+            recordBtn.disabled = false;
+            recordBtn.classList.remove('recording');
+        }
+
+        // Toggle запись по клику
+        function toggleRecording() {
+            // Проверяем, инициализирован ли микрофон
+            if ((!mediaRecorder && !useWebAudioFallback) || (useWebAudioFallback && !audioContext)) {
+                showError('Микрофон не инициализирован. Инициализация...');
+                initRecording().catch(err => {
+                    console.error('Failed to initialize recording:', err);
+                });
+                return;
+            }
+            
+            if (useWebAudioFallback) {
+                // Для Safari используем Web Audio API
+                if (!isRecording) {
+                    startWebAudioRecording();
+                } else {
+                    stopWebAudioRecording();
+                }
+            } else {
+                // Для других браузеров используем MediaRecorder
+                if (mediaRecorder.state === 'inactive' && !isRecording) {
+                    startMediaRecorderRecording();
+                } else if (mediaRecorder.state === 'recording' && isRecording) {
+                    stopMediaRecorderRecording();
+                }
+            }
+        }
+
+        // Начало записи через MediaRecorder
+        function startMediaRecorderRecording() {
+            audioChunks = [];
+            mediaRecorder.start(100);
+            recordBtn.classList.add('recording');
+            status.className = 'status recording';
+            errorDiv.classList.remove('show');
+            isRecording = true;
+            console.log('Recording started (MediaRecorder)');
+            
+            recordingStartTime = Date.now();
+            recordingTimer = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                status.textContent = `Запись... ${elapsed} сек`;
+            }, 100);
+        }
+
+        // Остановка записи через MediaRecorder
+        function stopMediaRecorderRecording() {
+            console.log('Stopping recording (MediaRecorder)...');
+            
+            if (recordingTimer) {
+                clearInterval(recordingTimer);
+                recordingTimer = null;
+            }
+            
+            const recordingDuration = recordingStartTime ? Math.floor((Date.now() - recordingStartTime) / 1000) : 0;
+            console.log('Recording duration:', recordingDuration, 'seconds');
+            
+            mediaRecorder.stop();
+            recordBtn.classList.remove('recording');
+            status.textContent = 'Обработка...';
+            status.className = 'status processing';
+            recordBtn.disabled = true;
+            isRecording = false;
+            recordingStartTime = null;
+        }
+
+        // Начало записи через Web Audio API (Safari)
+        function startWebAudioRecording() {
+            if (!audioContext || !audioWorkletNode) {
+                showError('Аудио система не инициализирована. Обновите страницу.');
+                return;
+            }
+            
+            audioBuffer = [];
+            recordBtn.classList.add('recording');
+            status.className = 'status recording';
+            errorDiv.classList.remove('show');
+            isRecording = true;
+            console.log('Recording started (Web Audio API)');
+            
+            recordingStartTime = Date.now();
+            recordingTimer = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                status.textContent = `Запись... ${elapsed} сек`;
+            }, 100);
+        }
+
+        // Остановка записи через Web Audio API (Safari)
+        async function stopWebAudioRecording() {
+            console.log('Stopping recording (Web Audio API)...');
+            
+            if (recordingTimer) {
+                clearInterval(recordingTimer);
+                recordingTimer = null;
+            }
+            
+            const recordingDuration = recordingStartTime ? Math.floor((Date.now() - recordingStartTime) / 1000) : 0;
+            console.log('Recording duration:', recordingDuration, 'seconds');
+            
+            isRecording = false;
+            recordBtn.classList.remove('recording');
+            status.textContent = 'Обработка...';
+            status.className = 'status processing';
+            recordBtn.disabled = true;
+            recordingStartTime = null;
+            
+            // Обрабатываем запись
+            await handleRecordingStop();
+        }
+
+        // Обработчики событий для кнопки
+        recordBtn.addEventListener('click', toggleRecording);
+        
+        // Для мобильных устройств - предотвращаем двойной клик
+        let touchStartTime = 0;
+        recordBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            touchStartTime = Date.now();
+        }, { passive: false });
+        
+        recordBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            // Предотвращаем двойной срабатывание (клик + touch)
+            const touchDuration = Date.now() - touchStartTime;
+            if (touchDuration < 300) {
+                toggleRecording();
+            }
+        }, { passive: false });
 
         // Конвертация аудио в WAV
         async function convertToWav(audioBlob) {
@@ -1264,7 +1801,24 @@
 
         // Инициализация при загрузке
         loadTheme();
-        initRecording();
+        
+        // Инициализация экранов при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            // Скрываем все экраны кроме welcomeScreen
+            document.querySelectorAll('.screen').forEach(screen => {
+                if (screen.id !== 'welcomeScreen') {
+                    screen.classList.remove('active');
+                }
+            });
+            // Убеждаемся, что welcomeScreen активен
+            welcomeScreen.classList.add('active');
+            // Скрываем главное меню
+            mainMenu.style.display = 'none';
+            // Скрываем экран обратной связи
+            feedbackScreen.classList.remove('active');
+        });
+        
+        // Микрофон будет инициализирован при открытии экрана голосового помощника
     </script>
 </body>
 </html>
