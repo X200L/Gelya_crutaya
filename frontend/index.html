@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Альфа-Банк - Банкомат</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="atm-container">
+        <div class="atm-header">
+            <div class="atm-logo">АЛЬФА-БАНК</div>
+            <div class="atm-subtitle">Банкомат самообслуживания</div>
+        </div>
+
+        <!-- Начальный экран -->
+        <div class="screen welcome-screen active" id="welcomeScreen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; text-align: center;">
+            <div class="welcome-title">Добро пожаловать!</div>
+            <div class="welcome-subtitle">Выберите операцию для начала работы</div>
+            <button class="start-btn" onclick="startService()">Начать обслуживание</button>
+        </div>
+
+        <!-- Главное меню -->
+        <div class="main-menu" id="mainMenu" style="display: none;">
+            <button class="menu-btn" onclick="showScreen('balance', this)">
+                <span class="menu-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.81 1.63 2.85 3.92 3.42 2.19.53 2.34 1.16 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.72-2.92 0-1.51-1.19-2.68-3.65-3.42z"/>
+                    </svg>
+                </span>
+                Баланс
+            </button>
+            <button class="menu-btn" onclick="showScreen('withdraw', this)">
+                <span class="menu-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.38-1.9 1.38-1.4 0-2.05-.78-2.05-1.9h-2.2c.05 1.95 1.18 3.05 3.25 3.4V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+                    </svg>
+                </span>
+                Снятие наличных
+            </button>
+            <button class="menu-btn" onclick="showScreen('deposit', this)">
+                <span class="menu-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                    </svg>
+                </span>
+                Внесение средств
+            </button>
+            <button class="menu-btn" onclick="showScreen('voice', this)">
+                <span class="menu-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+                    </svg>
+                </span>
+                Голосовой помощник
+            </button>
+            <button class="menu-btn" onclick="showScreen('transfer', this)">
+                <span class="menu-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/>
+                    </svg>
+                </span>
+                Переводы
+            </button>
+            <button class="menu-btn" onclick="showScreen('settings', this)">
+                <span class="menu-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94L14.4 2.81c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                    </svg>
+                </span>
+                Настройки
+            </button>
+            <button class="menu-btn" onclick="showFeedbackScreen()" style="grid-column: 1 / -1;">
+                <span class="menu-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </span>
+                Уйти
+            </button>
+        </div>
+
+        <!-- Экран обратной связи -->
+        <div class="screen feedback-screen" id="feedbackScreen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px;">
+            <div class="screen-header">
+                <div style="width: 100px;"></div>
+                <h2 class="screen-title">Обратная связь</h2>
+                <div style="width: 100px;"></div>
+            </div>
+            <div class="screen-content">
+                <div class="rating-label">Оцените качество обслуживания</div>
+                <div class="rating-buttons" id="ratingButtons">
+                    <button class="rating-btn" onclick="selectRating(1)">1</button>
+                    <button class="rating-btn" onclick="selectRating(2)">2</button>
+                    <button class="rating-btn" onclick="selectRating(3)">3</button>
+                    <button class="rating-btn" onclick="selectRating(4)">4</button>
+                    <button class="rating-btn" onclick="selectRating(5)">5</button>
+                    <button class="rating-btn" onclick="selectRating(6)">6</button>
+                    <button class="rating-btn" onclick="selectRating(7)">7</button>
+                    <button class="rating-btn" onclick="selectRating(8)">8</button>
+                    <button class="rating-btn" onclick="selectRating(9)">9</button>
+                    <button class="rating-btn" onclick="selectRating(10)">10</button>
+                </div>
+                <div class="thank-you-message" id="thankYouMessage" style="display: none;">
+                    Спасибо за вашу оценку!
+                </div>
+                <button class="action-btn" onclick="exitService()" id="exitBtn">Уйти</button>
+            </div>
+        </div>
+
+        <!-- Экран баланса -->
+        <div class="screen" id="balanceScreen">
+            <div class="screen-header">
+                <button class="back-btn" onclick="showMainMenu()">← Назад</button>
+                <h2 class="screen-title">Баланс счета</h2>
+                <div style="width: 100px;"></div>
+            </div>
+            <div class="screen-content">
+                <div class="info-item">
+                    <span class="info-label">Текущий баланс:</span>
+                    <span class="info-value">125 450,00 ₽</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Доступно к снятию:</span>
+                    <span class="info-value">125 450,00 ₽</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Номер счета:</span>
+                    <span class="info-value">4081 7810 1234 5678</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран снятия наличных -->
+        <div class="screen" id="withdrawScreen">
+            <div class="screen-header">
+                <button class="back-btn" onclick="showMainMenu()">← Назад</button>
+                <h2 class="screen-title">Снятие наличных</h2>
+                <div style="width: 100px;"></div>
+            </div>
+            <div class="screen-content">
+                <div style="text-align: center; margin-bottom: 20px; color: var(--text-secondary);">
+                    Выберите сумму или введите свою
+                </div>
+                <div style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;">
+                    <button class="quick-amount-btn" onclick="setAmount(1000)">1 000 ₽</button>
+                    <button class="quick-amount-btn" onclick="setAmount(3000)">3 000 ₽</button>
+                    <button class="quick-amount-btn" onclick="setAmount(5000)">5 000 ₽</button>
+                    <button class="quick-amount-btn" onclick="setAmount(10000)">10 000 ₽</button>
+                </div>
+                <input type="number" class="amount-input" id="withdrawAmount" placeholder="Введите сумму" min="100" step="100">
+                <button class="action-btn" onclick="processWithdraw()">Снять наличные</button>
+            </div>
+        </div>
+
+        <!-- Экран внесения средств -->
+        <div class="screen" id="depositScreen">
+            <div class="screen-header">
+                <button class="back-btn" onclick="showMainMenu()">← Назад</button>
+                <h2 class="screen-title">Внесение средств</h2>
+                <div style="width: 100px;"></div>
+            </div>
+            <div class="screen-content">
+                <div style="text-align: center; margin-bottom: 20px; color: var(--text-secondary);">
+                    Вставьте купюры в приемник
+                </div>
+                <div style="text-align: center; padding: 40px; background: var(--bg-secondary); border-radius: 10px; border: 2px dashed var(--border-color);">
+                    <div class="icon-large" style="margin-bottom: 20px; color: var(--accent-color);">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                        </svg>
+                    </div>
+                    <div style="color: var(--text-secondary); margin-bottom: 10px;">Ожидание купюр...</div>
+                    <div style="color: var(--text-tertiary); font-size: 0.9em;">Вставьте купюры номиналом 100, 500, 1000, 2000, 5000 ₽</div>
+                </div>
+                <button class="action-btn" onclick="showMainMenu()">Отмена</button>
+            </div>
+        </div>
+
+        <!-- Экран переводов -->
+        <div class="screen" id="transferScreen">
+            <div class="screen-header">
+                <button class="back-btn" onclick="showMainMenu()">← Назад</button>
+                <h2 class="screen-title">Переводы</h2>
+                <div style="width: 100px;"></div>
+            </div>
+            <div class="screen-content">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600;">Номер счета получателя:</label>
+                    <input type="text" class="amount-input" id="transferAccount" placeholder="4081 7810 XXXX XXXX" style="font-size: 1.2em;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600;">Сумма перевода:</label>
+                    <input type="number" class="amount-input" id="transferAmount" placeholder="Введите сумму" min="1" step="1">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600;">Комментарий (необязательно):</label>
+                    <input type="text" class="amount-input" id="transferComment" placeholder="Комментарий к переводу" style="font-size: 1em;">
+                </div>
+                <button class="action-btn" onclick="processTransfer()">Выполнить перевод</button>
+            </div>
+        </div>
+
+        <!-- Экран настроек -->
+        <div class="screen" id="settingsScreen">
+            <div class="screen-header">
+                <button class="back-btn" onclick="showMainMenu()">← Назад</button>
+                <h2 class="screen-title">Настройки</h2>
+                <div style="width: 100px;"></div>
+            </div>
+            <div class="screen-content">
+                <div class="theme-toggle">
+                    <span class="theme-toggle-label">Темная тема</span>
+                    <div class="toggle-switch active" id="themeToggle" onclick="toggleTheme()"></div>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Версия системы:</span>
+                    <span class="info-value">2.1.5</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">ID терминала:</span>
+                    <span class="info-value">ATM-ALFA-0427</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран голосового помощника -->
+        <div class="screen" id="voiceScreen">
+            <div class="screen-header">
+                <button class="back-btn" onclick="showMainMenu()">← Назад</button>
+                <h2 class="screen-title">Голосовой помощник</h2>
+                <div style="width: 100px;"></div>
+            </div>
+            
+            <div class="status idle" id="status">
+                Готов к работе
+            </div>
+
+            <div class="button-container">
+                <button class="record-btn" id="recordBtn" title="Нажмите для начала записи, нажмите еще раз для остановки">
+                    <span class="icon-microphone">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+                        </svg>
+                    </span>
+                </button>
+            </div>
+
+            <div class="instruction">
+                Нажмите кнопку микрофона для начала записи, нажмите еще раз для остановки
+            </div>
+
+            <!-- Текстовый блок для запросов -->
+            <div class="text-chat-container">
+                <div class="text-chat-header">Текстовый запрос</div>
+                <div class="text-chat-input-container">
+                    <textarea 
+                        id="textInput" 
+                        class="text-chat-input" 
+                        placeholder="Введите ваш вопрос..."
+                        rows="3"
+                    ></textarea>
+                    <button class="text-chat-send-btn" id="textSendBtn" onclick="sendTextMessage()">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px; fill: white;">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="text-chat-response" id="textResponse" style="display: none;">
+                    <div class="text-chat-response-label">Ответ:</div>
+                    <div class="text-chat-response-text" id="textResponseText"></div>
+                </div>
+            </div>
+
+            <div class="error" id="error"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
