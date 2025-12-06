@@ -564,5 +564,151 @@ def voice_assistant():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8080, host='0.0.0.0')
+    import ssl
+    import sys
+    import socket
+    
+    # Получаем настройки из переменных окружения
+    port = int(os.getenv('PORT', 8080))
+    use_https = os.getenv('USE_HTTPS', 'false').lower() == 'true'
+    ssl_cert_path = os.getenv('SSL_CERT_PATH', '')
+    ssl_key_path = os.getenv('SSL_KEY_PATH', '')
+    
+    ssl_context = None
+    
+    if use_https:
+        if ssl_cert_path and ssl_key_path:
+            # Используем указанные сертификаты
+            if os.path.exists(ssl_cert_path) and os.path.exists(ssl_key_path):
+                ssl_context = (ssl_cert_path, ssl_key_path)
+                print(f"Using SSL certificates: {ssl_cert_path}, {ssl_key_path}")
+            else:
+                print(f"WARNING: SSL certificate files not found. Falling back to HTTP.")
+                use_https = False
+        else:
+            # Пытаемся создать самоподписанный сертификат для разработки
+            try:
+                import tempfile
+                import subprocess
+                
+                cert_dir = os.path.join(os.path.dirname(__file__), 'ssl')
+                os.makedirs(cert_dir, exist_ok=True)
+                
+                cert_file = os.path.join(cert_dir, 'cert.pem')
+                key_file = os.path.join(cert_dir, 'key.pem')
+                
+                # Определяем IP адрес сервера
+                server_ip = None
+                try:
+                    # Пытаемся получить внешний IP
+                    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    s.connect(("8.8.8.8", 80))
+                    server_ip = s.getsockname()[0]
+                    s.close()
+                    print(f"Detected server IP: {server_ip}")
+                except Exception as e:
+                    print(f"Could not detect server IP: {e}")
+                    server_ip = '127.0.0.1'
+                
+                if not os.path.exists(cert_file) or not os.path.exists(key_file):
+                    print("Creating self-signed SSL certificate for development...")
+                    # Создаем конфигурационный файл для OpenSSL с IP в SAN
+                    config_file = os.path.join(cert_dir, 'openssl.conf')
+                    with open(config_file, 'w') as f:
+                        f.write(f"""[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+CN = {server_ip}
+
+[v3_req]
+keyUsage = keyEncipherment, dataEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]
+IP.1 = {server_ip}
+IP.2 = 127.0.0.1
+DNS.1 = localhost
+""")
+                    
+                    # Создаем самоподписанный сертификат с IP адресом
+                    try:
+                        result = subprocess.run([
+                            'openssl', 'req', '-x509', '-newkey', 'rsa:4096',
+                            '-nodes', '-out', cert_file, '-keyout', key_file,
+                            '-days', '365', '-config', config_file,
+                            '-extensions', 'v3_req'
+                        ], check=True, capture_output=True, text=True)
+                        print(f"SSL certificate created: {cert_file}")
+                        print(f"Certificate is valid for IP: {server_ip} and localhost")
+                    except subprocess.CalledProcessError as e:
+                        print(f"ERROR: Failed to create SSL certificate with SAN: {e}")
+                        if e.stderr:
+                            print(f"stderr: {e.stderr}")
+                        # Пробуем создать простой сертификат без SAN
+                        print("Trying to create simple certificate without SAN...")
+                        try:
+                            result = subprocess.run([
+                                'openssl', 'req', '-x509', '-newkey', 'rsa:4096',
+                                '-nodes', '-out', cert_file, '-keyout', key_file,
+                                '-days', '365', '-subj', f'/CN={server_ip}'
+                            ], check=True, capture_output=True, text=True)
+                            print(f"SSL certificate created (simple): {cert_file}")
+                            print(f"NOTE: Simple certificate may show warnings in browsers")
+                        except Exception as e2:
+                            print(f"ERROR: Failed to create simple certificate: {e2}")
+                            print("Please install OpenSSL or provide SSL certificates manually.")
+                            use_https = False
+                    except FileNotFoundError:
+                        print("ERROR: OpenSSL not found. Please install OpenSSL or provide SSL certificates manually.")
+                        print("On macOS: brew install openssl")
+                        print("On Ubuntu/Debian: sudo apt-get install openssl")
+                        use_https = False
+                
+                if os.path.exists(cert_file) and os.path.exists(key_file):
+                    ssl_context = (cert_file, key_file)
+                    print(f"Using self-signed SSL certificate for HTTPS")
+                    print(f"Certificate is valid for: {server_ip}, 127.0.0.1, localhost")
+                    print("NOTE: Browsers will show a security warning for self-signed certificates.")
+                    print("      You need to accept the certificate to use the microphone on iOS devices.")
+                else:
+                    print("WARNING: Could not create SSL certificate. Falling back to HTTP.")
+                    use_https = False
+            except Exception as e:
+                print(f"WARNING: Could not set up SSL: {e}. Falling back to HTTP.")
+                use_https = False
+    
+    protocol = 'https' if use_https and ssl_context else 'http'
+    
+    # Получаем IP адрес для отображения
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        server_ip = s.getsockname()[0]
+        s.close()
+    except:
+        server_ip = "0.0.0.0"
+    
+    print(f"\n{'='*60}")
+    print(f"Server starting on {protocol}://0.0.0.0:{port}")
+    if use_https and ssl_context:
+        print(f"SSL enabled with self-signed certificate")
+        print(f"Access the server at: {protocol}://{server_ip}:{port}")
+        print(f"NOTE: Browsers will show a security warning for self-signed certificates.")
+        print(f"      Click 'Advanced' -> 'Proceed to {server_ip}' to accept the certificate.")
+        print(f"      This is required for microphone to work on iOS devices.")
+    else:
+        print(f"HTTP mode")
+        print(f"WARNING: Microphone will NOT work on iOS devices with HTTP!")
+        print(f"         To enable HTTPS, set USE_HTTPS=true in .env file")
+        print(f"         Server will automatically create self-signed certificate")
+    print(f"{'='*60}\n")
+    
+    if use_https and ssl_context:
+        app.run(debug=True, port=port, host='0.0.0.0', ssl_context=ssl_context)
+    else:
+        app.run(debug=True, port=port, host='0.0.0.0')
 

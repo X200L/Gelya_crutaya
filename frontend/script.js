@@ -281,10 +281,22 @@
         async function initRecording() {
             try {
                 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                const isLocalhost = location.hostname === 'localhost' || 
+                                   location.hostname === '127.0.0.1' || 
+                                   location.hostname === '0.0.0.0' ||
+                                   location.hostname.startsWith('192.168.') ||
+                                   location.hostname.startsWith('10.') ||
+                                   location.hostname.startsWith('172.');
                 
-                // Проверяем, что мы на HTTPS или localhost (требуется для getUserMedia на iOS)
-                if (isIOS && location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-                    throw new Error('Для работы микрофона на iOS требуется HTTPS соединение. Пожалуйста, откройте сайт по HTTPS.');
+                // На iOS getUserMedia работает только по HTTPS, кроме localhost
+                // Для других браузеров HTTP на localhost тоже работает
+                if (isIOS && location.protocol !== 'https:' && !isLocalhost) {
+                    throw new Error('Для работы микрофона на iOS требуется HTTPS соединение. Пожалуйста, откройте сайт по HTTPS или используйте localhost для разработки.');
+                }
+                
+                // Для других браузеров предупреждаем, но не блокируем на localhost
+                if (!isIOS && location.protocol !== 'https:' && !isLocalhost) {
+                    console.warn('getUserMedia рекомендуется использовать по HTTPS для безопасности');
                 }
                 
                 // Для iOS Safari используем более простые настройки аудио
@@ -337,15 +349,29 @@
                 } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
                     errorMessage = 'Микрофон не найден. Проверьте подключение устройства.';
                 } else if (err.name === 'NotSupportedError' || err.name === 'NotReadableError' || err.name === 'OverconstrainedError') {
+                    const isLocalhost = location.hostname === 'localhost' || 
+                                       location.hostname === '127.0.0.1' || 
+                                       location.hostname === '0.0.0.0';
                     if (isIOS) {
                         // На iOS NotSupportedError обычно означает проблему с разрешениями или настройками
-                        errorMessage = 'Ошибка доступа к микрофону на iOS. Убедитесь, что: 1) Вы используете Safari (не Chrome), 2) Сайт открыт по HTTPS, 3) Вы дали разрешение на микрофон (иконка в адресной строке), 4) Микрофон не занят другим приложением.';
+                        if (isLocalhost) {
+                            errorMessage = 'Ошибка доступа к микрофону на iOS. Убедитесь, что: 1) Вы используете Safari (не Chrome), 2) Вы дали разрешение на микрофон (иконка в адресной строке), 3) Микрофон не занят другим приложением.';
+                        } else {
+                            errorMessage = 'Ошибка доступа к микрофону на iOS. Убедитесь, что: 1) Вы используете Safari (не Chrome), 2) Сайт открыт по HTTPS, 3) Вы дали разрешение на микрофон (иконка в адресной строке), 4) Микрофон не занят другим приложением.';
+                        }
                     } else {
                         errorMessage = 'Ваш браузер не поддерживает запись аудио или микрофон занят другим приложением. Попробуйте использовать Chrome или Firefox.';
                     }
                 } else if (err.name === 'TypeError' || (err.message && err.message.includes('getUserMedia'))) {
+                    const isLocalhost = location.hostname === 'localhost' || 
+                                       location.hostname === '127.0.0.1' || 
+                                       location.hostname === '0.0.0.0';
                     if (isIOS) {
-                        errorMessage = 'Ошибка инициализации микрофона. Убедитесь, что вы используете Safari и сайт открыт по HTTPS (не HTTP).';
+                        if (isLocalhost) {
+                            errorMessage = 'Ошибка инициализации микрофона на iOS. Убедитесь, что вы используете Safari и дали разрешение на доступ к микрофону.';
+                        } else {
+                            errorMessage = 'Ошибка инициализации микрофона на iOS. Убедитесь, что вы используете Safari, сайт открыт по HTTPS (не HTTP), и дали разрешение на микрофон.';
+                        }
                     } else {
                         errorMessage = 'Ошибка инициализации микрофона. Убедитесь, что вы используете HTTPS или localhost.';
                     }
