@@ -2,7 +2,12 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Альфа-Банк - Банкомат</title>
     <style>
         :root {
@@ -1799,6 +1804,66 @@
             }, 5000);
         }
 
+        // Версия приложения для предотвращения кэширования
+        const APP_VERSION = Date.now().toString(); // Используем timestamp для уникальности
+        const LAST_UPDATE_KEY = 'app_last_update';
+        const CACHE_BUSTER = '?v=' + APP_VERSION;
+        
+        // Проверка обновлений при загрузке
+        function checkForUpdates() {
+            const lastUpdate = localStorage.getItem(LAST_UPDATE_KEY);
+            const currentTime = Date.now();
+            
+            // Сохраняем время последнего обновления
+            localStorage.setItem(LAST_UPDATE_KEY, currentTime.toString());
+        }
+        
+        // Принудительное обновление для iPad/iOS
+        function forceRefresh() {
+            if (navigator.userAgent.match(/iPad|iPhone|iPod/i)) {
+                // Очищаем кэш и перезагружаем
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                        for(let registration of registrations) {
+                            registration.unregister();
+                        }
+                    });
+                }
+                // Принудительная перезагрузка с очисткой кэша
+                window.location.href = window.location.href.split('?')[0] + CACHE_BUSTER;
+            }
+        }
+        
+        // Обработчик для обновления при возврате на вкладку (iOS/iPad)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                // При возврате на вкладку проверяем обновления
+                const lastUpdate = localStorage.getItem(LAST_UPDATE_KEY);
+                const currentTime = Date.now();
+                if (lastUpdate && (currentTime - parseInt(lastUpdate)) > 1 * 60 * 1000) {
+                    // Если прошло больше 1 минуты, обновляем страницу
+                    forceRefresh();
+                }
+            }
+        });
+        
+        // Обработчик для обновления при фокусе (iOS/iPad)
+        window.addEventListener('pageshow', function(event) {
+            // Если страница загружена из кэша (back/forward), обновляем
+            if (event.persisted) {
+                forceRefresh();
+            }
+        });
+        
+        // Обработчик для обновления при фокусе окна
+        window.addEventListener('focus', function() {
+            const lastUpdate = localStorage.getItem(LAST_UPDATE_KEY);
+            const currentTime = Date.now();
+            if (lastUpdate && (currentTime - parseInt(lastUpdate)) > 1 * 60 * 1000) {
+                forceRefresh();
+            }
+        });
+        
         // Инициализация при загрузке
         loadTheme();
         
@@ -1816,6 +1881,9 @@
             mainMenu.style.display = 'none';
             // Скрываем экран обратной связи
             feedbackScreen.classList.remove('active');
+            
+            // Проверяем обновления после загрузки
+            setTimeout(checkForUpdates, 1000);
         });
         
         // Микрофон будет инициализирован при открытии экрана голосового помощника
