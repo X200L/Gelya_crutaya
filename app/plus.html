@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Альфа-Банк</title>
+  <link rel="stylesheet" href="pstyle.css"> 
+</head>
+<body>
+
+  <!-- Основной контент -->
+  <div class="container">
+    <h1 class="page-title">Что вас интересует?</h1>
+
+    <!-- Список опций -->
+    <div class="options-list">
+      <div class="option-item">
+        <div class="option-icon card"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20,8H4V6H20M20,18H4V12H20M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.1,4 20,4Z"/></svg></div>
+        <div class="option-text">Карта</div>
+      </div>
+      <div class="option-item">
+        <div class="option-icon account"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/></svg></div>
+        <div class="option-text">Счёт</div>
+      </div>
+      <div class="option-item">
+        <div class="option-icon savings"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M5,9.2h3V19H5zM10.6,5h2.8v14h-2.8zm5.6,8H19v6h-2.8z"/></svg></div>
+        <div class="option-text">Накопления</div>
+      </div>
+      <div class="option-item">
+        <div class="option-icon invest"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M5,9.2h3V19H5zM10.6,5h2.8v14h-2.8zm5.6,8H19v6h-2.8z"/></svg></div>
+        <div class="option-text">Инвестиции</div>
+      </div>
+      <div class="option-item">
+        <div class="option-icon business"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10,2V8H14V2H10M4,10V16H8V10H4M16,10V16H20V10H16M10,18V24H14V18H10M4,18V24H8V18H4M16,18V24H20V18H16Z"/></svg></div>
+        <div class="option-text">Бизнесу и Самозанятым</div>
+      </div>
+      <div class="option-item" id="joinCommunityBtn">
+        <div class="option-icon business" ><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10,2V8H14V2H10M4,10V16H8V10H4M16,10V16H20V10H16M10,18V24H14V18H10M4,18V24H8V18H4M16,18V24H20V18H16Z"/></svg></div>
+        <div class="option-text">Вступить в комьюнити</div>
+      </div>
+    </div>
+
+    <!-- Раздел "Возможности" -->
+    <div class="section-title">Возможности</div>
+    <div class="opportunities-container">
+      <div class="opportunity-card gradient">
+        <div class="opportunity-title">Стать клиентом Alfa Only</div>
+      </div>
+      <div class="opportunity-card blue">
+        <div class="opportunity-title">Добавить корпоративную карту</div>
+        <div class="opportunity-image corporate">A</div>
+      </div>
+      <div class="opportunity-card community" id="joinCommunityBtn">
+        <div class="opportunity-title">Вступить в комьюнити</div>
+        <div class="opportunity-subtitle">Мероприятия и лекции</div>
+        <div class="opportunity-image community"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M16,4C18.21,4 20,5.79 20,8C20,10.21 18.21,12 16,12C13.79,12 12,10.21 12,8C12,5.79 13.79,4 16,4M16,14C18.67,14 24,15.33 24,18V20H8V18C8,15.33 13.33,14 16,14M8,12C10.21,12 12,10.21 12,8C12,5.79 10.21,4 8,4C5.79,4 4,5.79 4,8C4,10.21 5.79,12 8,12M8,14C5.33,14 0,15.33 0,18V20H6V18C6,16.9 6.9,16 8,16C9.1,16 10,16.9 10,18V20H16V18C16,15.33 10.67,14 8,14Z"/></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно: Вступить в комьюнити -->
+  <div class="modal-overlay" id="communityModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Альфа-Комьюнити</div>
+        <div class="modal-close" id="communityClose">×</div>
+      </div>
+      <div class="modal-body">
+        Присоединяйтесь к сообществу клиентов Альфа-Банка! Участвуйте в эксклюзивных мероприятиях, лекциях, мастер-классах и нетворкингах. Узнавайте первыми о новых продуктах и получайте персональные приглашения.
+      </div>
+      <div class="field">
+        <label>Ваше имя</label>
+        <input type="text" class="input" id="communityName" placeholder="фио">
+      </div>
+      <div class="field">
+        <label>Телефон или email</label>
+        <input type="text" class="input" id="communityContact" placeholder="+7 999 123-45-67">
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="communityAgree">
+        <label for="communityAgree" style="font-size:13px; color:#ccc;">
+          Согласен на обработку персональных данных и получение уведомлений
+        </label>
+      </div>
+      <div class="btn-group">
+        <div class="btn secondary" id="communityCancel">Отмена</div>
+        <div class="btn primary" id="communitySubmit">Подать заявку</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Нижняя панель навигации -->
+  <div class="bottom-nav">
+    <div class="nav-item">
+      <a href="index.html" class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg></a>
+      <div class="nav-label">Главная</div>
+    </div>
+    <div class="nav-item">
+      <a href="platezi.html" class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7,15H9C9,16.08 10.37,17 12,17C13.63,17 15,16.08 15,15C15,13.9 13.96,13.5 11.76,12.97C9.64,12.44 7,11.78 7,9C7,7.21 8.47,5.69 10.5,5.18V3H13.5V5.18C15.53,5.69 17,7.21 17,9H15C15,7.92 13.63,7 12,7C10.37,7 9,7.92 9,9C9,10.1 10.04,10.5 12.24,11.03C14.36,11.56 17,12.22 17,15C17,16.79 15.53,18.31 13.5,18.82V21H10.5V18.82C8.47,18.31 7,16.79 7,15Z"/></svg></a>
+      <div class="nav-label">Платежи</div>
+    </div>
+    <div class="nav-item">
+      <a href="vigoda.html" class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5 2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z"/></svg></a>
+      <div class="nav-label">Выгода</div>
+    </div>
+    <div class="nav-item">
+      <a href="history.html" class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/></svg></a>
+      <div class="nav-label">История</div>
+    </div>
+    <div class="nav-item active">
+      <a href="chats.html" class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16Z"/></svg></a>
+      <div class="nav-label">Чаты</div>
+    </div>
+  </div>
+
+  <script src="pljs.js"></script>
+</body>
+</html>

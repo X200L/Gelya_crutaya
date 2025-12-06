@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Альфа-Банк</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <!-- Шапка -->
+  <div class="header">
+  <div class="user-info">
+    <div class="avatar"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
+    <div class="username">Игорь</div>
+  </div>
+    <a href="plus.html" class="add-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" color="#ffffff"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></a>
+</div>
+
+  <!-- Счета -->
+  <div class="accounts">
+    <div class="account-card">
+      <div class="account-title">Текущий счёт</div>
+      <div class="account-balance">2 095,80 ₽</div>
+      <div class="card-number">8573<br>МИР</div>
+    </div>
+
+    <div class="account-card">
+      <div class="account-title">Текущий счёт</div>
+      <div class="account-balance">44,71 ₽</div>
+      <div class="card-number">6322<br>МИР</div>
+    </div>
+  </div>
+
+  <div class="visit-banner" id="openVisit">
+  <span>Прийти в банк</span>
+</div> 
+  <!-- Поиск -->
+  <div class="search-bar">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+    <input type="text" class="search-input" placeholder="Поиск по приложению">
+    <div class="scan-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6.5 9.5v3h-3v-3h3M19 13h-6v6h6v-6z"/></svg></div>
+  </div>
+
+  <!-- Модальное окно записи визита -->
+  <div class="modal-overlay" id="visitModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Запланировать визит</div>
+        <div class="modal-close" id="visitClose">×</div>
+      </div>
+      <div class="modal-body">
+        <!-- Шаг 1: Особенности/статус -->
+        <div class="step active" data-step="1">
+          <div class="field">
+            <label>Укажите особенности / статус</label>
+            <div class="row" id="statusChips">
+              <div class="chip" data-value="ovz">
+                <div class="chip-icon">?</div>
+                <div>Нужно ли вам специальнео обслуживание?</div>
+              </div>
+              <div class="chip" data-value="pensioner">
+                <div class="chip-icon">👴</div>
+                <div>Пенсионер</div>
+              </div>
+              <div class="chip" data-value="business">
+                <div class="chip-icon">💼</div>
+                <div>Бизнесмен</div>
+              </div>
+              <div class="chip" data-value="individual">
+                <div class="chip-icon">👤</div>
+                <div>Физическое лицо</div>
+              </div>
+              <div class="chip" data-value="alfa-only">
+                <div class="chip-icon">⭐</div>
+                <div>Подписчик Alfa Only</div>
+              </div>
+              <div class="chip" data-value="community">
+                <div class="chip-icon">👥</div>
+                <div>Участник комьюнити Альфы</div>
+              </div>
+            </div>
+          </div>
+          <div class="field" id="ovzDetailsField" style="display:none;">
+            <label>Уточните какое</label>
+            <textarea class="textarea" id="ovzDetails" placeholder="Например: нужна пандусная доступность, тише обстановка и т.д."></textarea>
+          </div>
+          <div class="error" id="step1Error" style="display:none;"></div>
+        </div>
+
+        <!-- Шаг 2: Вопрос/цель визита -->
+        <div class="step" data-step="2">
+          <div class="field">
+            <label>Выберите тему визита</label>
+            <div class="row" id="topicChips">
+              <div class="chip" data-value="accounts">
+                <div class="chip-icon">💳</div>
+                <div>Счета и карты</div>
+              </div>
+              <div class="chip" data-value="credit">
+                <div class="chip-icon">📊</div>
+                <div>Кредитные продукты</div>
+              </div>
+              <div class="chip" data-value="deposits">
+                <div class="chip-icon">🏦</div>
+                <div>Вклады</div>
+              </div>
+              <div class="chip" data-value="invest-insure">
+                <div class="chip-icon">📈</div>
+                <div>Инвестиционные и страховые продукты</div>
+              </div>
+              <div class="chip" data-value="other">
+                <div class="chip-icon">⚙️</div>
+                <div>Другие операции</div>
+              </div>
+              <div class="chip" data-value="event">
+                <div class="chip-icon">🎪</div>
+                <div>Регистрация на мероприятие</div>
+              </div>
+            </div>
+          </div>
+          <div class="field" id="otherDetailsField" style="display:none;">
+            <label>Уточните, какие операции</label>
+            <textarea class="textarea" id="otherDetails" placeholder="Опишите кратко вашу задачу"></textarea>
+          </div>
+          <div class="error" id="step2Error" style="display:none;"></div>
+        </div>
+
+        <!-- Шаг 3: Дата и офис -->
+        <div class="step" data-step="3">
+          <div class="field">
+            <label>Дата визита</label>
+            <input type="date" class="date-input" id="visitDate">
+          </div>
+          <div class="field">
+            <label>Адрес офиса</label>
+            <select class="select" id="officeSelect">
+              <option value="">Выберите офис</option>
+              <option>г. Москва, ул. Лесная, 5</option>
+              <option>г. Москва, пр-т Мира, 12</option>
+              <option>г. Санкт-Петербург, Невский пр-т, 28</option>
+              <option>г. Казань, ул. Баумана, 7</option>
+            </select>
+          </div>
+          <div class="error" id="step3Error" style="display:none;"></div>
+        </div>
+
+        <!-- Шаг 4: Подтверждение -->
+        <div class="step" data-step="4">
+          <div class="field">
+            <label>Проверьте данные</label>
+            <div id="confirmSummary" style="font-size:15px; color:#ddd; line-height:1.5; background: #2d2d2d; padding: 16px; border-radius: 12px;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="btn secondary" id="prevStep">Назад</div>
+        <div class="btn primary" id="nextStep">Далее</div>
+      </div>
+    </div>
+  </div>
+  <!-- Деньги вам и друзьям -->
+  <div class="section-title">Новости</div>
+  <div class="cards-container">
+      <div class="card card-blue">
+    <a href="fingram.html" class="card-title">Запущен курс по финансовой грамотности</a>
+    <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></div>
+  </div>
+  <div class="card card-purple">
+    <div class="card-title">Появился голосовой ассистент</div>
+    <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg></div>
+  </div>
+  <div class="card card-green">
+    <a href="plus.html" class="card-title">Вступление в комьюнити</a>
+    <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 8H17c-.8 0-1.54.37-2.01.99L14 11v11h2v-6h2v6h2zM12.5 11.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S11 9.17 11 10s.67 1.5 1.5 1.5zM5.5 6c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2zm2 16v-7H9V9.5C9 8.12 7.88 7 6.5 7S4 8.12 4 9.5V15H2.5v7h5z"/></svg></div>
+  </div>
+  <div class="card card-orange">
+    <div class="card-title">Обновлена форма записи в банк</div>
+    <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></div>
+  </div>
+  </div>
+
+  <!-- Альфа-Выгодно -->
+  <div class="section-title">Альфа-Выгодно</div>
+  <div class="cards-container">
+    <div class="card card-purple">
+      <div class="card-title">Кэшбэк и сервисы</div>
+      <div style="display: flex; gap: 4px;">
+        <div class="card-icon airplane"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></div>
+      </div>
+      <div class="card-sublabel"> </div>
+    </div>
+    <div class="card card-blue">
+      <div class="card-title">Суперкэшбэк до 100%</div>
+      <div style="font-size: 24px; font-weight: bold; color: red; text-align: center; margin-top: 4px;">АЛЬФА</div>
+      <div style="font-size: 18px; font-weight: bold; color: green; text-align: center; margin-top: 2px;">ПЯТНИЦА</div>
+    </div>
+    <div class="card card-green">
+      <div class="card-title">Моя выгода</div>
+      <div class="card-icon chart"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg></div>
+      <div class="card-sublabel">История и прогноз</div>
+    </div>
+  </div>
+
+  <!-- Иконки услуг -->
+  <div class="icon-grid">
+    <div class="icon-item">
+      <div style="width: 40px; height: 40px; background-color: #ff3b30; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17 1.01L7 1c-1.1 0-1.99.9-1.99 2v18c0 1.1.89 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg></div>
+      <div class="icon-label">Связь</div>
+      <div class="icon-sublabel">до 100%</div>
+    </div>
+    <div class="icon-item">
+      <div style="width: 40px; height: 40px; background-color: #ffcc00; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: black;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></div>
+      <div class="icon-label">Тревел</div>
+      <div class="icon-sublabel">до 30%</div>
+    </div>
+    <div class="icon-item">
+      <div style="width: 40px; height: 40px; background-color: #ff3b30; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.6 14.8,10V11.5C15.4,11.5 16,12.4 16,13V16C16,16.6 15.6,17 15,17H9C8.4,17 8,16.6 8,16V13C8,12.4 8.4,11.5 9,11.5V10C9,8.6 10.6,7 12,7M12,8.2C11.2,8.2 10.2,9.2 10.2,10V11.5H13.8V10C13.8,9.2 12.8,8.2 12,8.2Z"/></svg></div>
+      <div class="icon-label">Страховки</div>
+      <div class="icon-sublabel">до 10%</div>
+    </div>
+    <div class="icon-item">
+      <div style="width: 40px; height: 40px; background-color: #ff9800; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A7,7 0 0,0 5,9C5,11.38 6.19,13.47 8,14.74V17A1,1 0 0,0 9,18H15A1,1 0 0,0 16,17V14.74C17.81,13.47 19,11.38 19,9A7,7 0 0,0 12,2M9,21A1,1 0 0,0 10,22H14A1,1 0 0,0 15,21V20H9V21Z"/></svg></div>
+      <div class="icon-label">Заправки</div>
+      <div class="icon-sublabel">до 7%</div>
+    </div>
+    <div class="icon-item">
+      <div style="width: 40px; height: 40px; background-color: #4caf50; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7,4V2A1,1 0 0,1 8,1H16A1,1 0 0,1 17,2V4H20A1,1 0 0,1 21,5V7A1,1 0 0,1 20,8H19V19A2,2 0 0,1 17,21H7A2,2 0 0,1 5,19V8H4A1,1 0 0,1 3,7V5A1,1 0 0,1 4,4H7M9,3V4H15V3H9M7,8V19H17V8H7M9,10H11V17H9V10M13,10H15V17H13V10Z"/></svg></div>
+      <div class="icon-label">Маркет</div>
+      <div class="icon-sublabel">до 40%</div>
+    </div>
+  </div>
+
+  <!-- Лучший кэшбэк от партнёров -->
+  <div class="section-title">Лучший кэшбэк от партнёров</div>
+  <div class="icon-grid">
+    <div class="icon-item">
+      <div style="width: 40px; height: 40px; background-color: #00bcd4; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5 2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z"/></svg></div>
+      <div class="icon-label">Яндекс Ла...</div>
+      <div class="icon-sublabel">до 10%</div>
+    </div>
+    <div class="icon-item">
+      <div style="width: 40px; height: 40px; background-color: #ff9800; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.81,14.12L5.64,11.29L8.17,10.79C11.39,6.41 17.55,4.22 19.78,4.22C19.78,6.45 17.59,12.61 13.21,15.83L12.71,18.36L9.88,21.19C8.5,22.57 6.5,22.57 5.12,21.19C3.74,19.81 3.74,17.81 5.12,16.43L2.81,14.12M12.71,10.79L13.21,8.26L10.38,5.43C9,4.05 7,4.05 5.62,5.43C4.24,6.81 4.24,8.81 5.62,10.19L8.17,12.71L12.71,10.79Z"/></svg></div>
+      <div class="icon-label">Бигфест</div>
+      <div class="icon-sublabel">до 50%</div>
+    </div>
+    <div class="icon-item">
+      <div style="width: 40px; height: 40px; background-color: #4caf50; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5,11L6.5,6.5H17.5L19,11M17.5,16A1.5,1.5 0 0,1 16,14.5A1.5,1.5 0 0,1 17.5,13A1.5,1.5 0 0,1 19,14.5A1.5,1.5 0 0,1 17.5,16M6.5,16A1.5,1.5 0 0,1 5,14.5A1.5,1.5 0 0,1 6.5,13A1.5,1.5 0 0,1 8,14.5A1.5,1.5 0 0,1 6.5,16M18.92,6C18.72,5.42 18.16,5 17.5,5H6.5C5.84,5 5.28,5.42 5.08,6L3,12V20A1,1 0 0,0 4,21H5A1,1 0 0,0 6,20V19H18V20A1,1 0 0,0 19,21H20A1,1 0 0,0 21,20V12L18.92,6Z"/></svg></div>
+      <div class="icon-label">Авито</div>
+      <div class="icon-sublabel">до 10%</div>
+    </div>
+    <div class="icon-item">
+      <div style="width: 40px; height: 40px; background-color: #9e9e9e; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/></svg></div>
+      <div class="icon-label">Lamoda Sp...</div>
+      <div class="icon-sublabel">до 15%</div>
+    </div>
+    <div class="icon-item">
+      <div style="width: 40px; height: 40px; background-color: #ff3b30; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5,16L3,5H1V3H23V5H21L19,16H5M17,18A2,2 0 0,1 19,20A2,2 0 0,1 17,22A2,2 0 0,1 15,20A2,2 0 0,1 17,18M7,18A2,2 0 0,1 9,20A2,2 0 0,1 7,22A2,2 0 0,1 5,20A2,2 0 0,1 7,18Z"/></svg></div>
+      <div class="icon-label">Justfood</div>
+      <div class="icon-sublabel">до 45%</div>
+    </div>
+    <div class="icon-item">
+      <div style="width: 40px; height: 40px; background-color: #673ab7; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/></svg></div>
+      <div class="icon-label">ПриЕм</div>
+      <div class="icon-sublabel">до 55%</div>
+    </div>
+  </div>
+
+  <!-- Переводы по телефону -->
+  <div class="section-title">Переводы по телефону</div>
+  <div class="icon-grid">
+    <div class="icon-item">
+      <div style="width: 40px; height: 40px; background-color: #ff3b30; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62,10.79C8.06,13.62 10.38,15.94 13.21,17.38L15.41,15.18C15.69,14.9 16.08,14.82 16.43,14.93C17.55,15.3 18.75,15.5 20,15.5A1,1 0 0,1 21,16.5V20A1,1 0 0,1 20,21A17,17 0 0,1 3,4A1,1 0 0,1 4,3H7.5A1,1 0 0,1 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z"/></svg></div>
+      <div class="icon-label">Сделать перевод</div>
+    </div>
+    <div class="icon-item">
+      <div style="width: 40px; height: 40px; background-color: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
+      <div class="icon-label">Себе</div>
+    </div>
+    <div class="icon-item">
+      <div style="width: 40px; height: 40px; background-color: #ffccdd; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #333; font-weight: bold;">СВ</div>
+      <div class="icon-label">Саша Воробьёв...</div>
+    </div>
+    <div class="icon-item">
+      <div style="width: 40px; height: 40px; background-color: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg></div>
+      <div class="icon-label">Как скрыть?</div>
+    </div>
+  </div>
+
+  <!-- Инвестиции -->
+  <div class="section-title">Инвестиции</div>
+  <div class="cards-container">
+    <div class="card card-orange">
+      <div class="card-title">Инвестиции с 14 лет</div>
+      <div class="card-sublabel">Откройте Брокерский счёт 🐻</div>
+    </div>
+    <div class="card card-red">
+      <div class="card-title">Драгметаллы всегда в цене</div>
+      <div class="card-sublabel">Вложения в золото 💰</div>
+    </div>
+    <div class="card card-blue">
+      <div class="card-title">Обзор инвестиций</div>
+      <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></div>
+      <div class="card-sublabel">Портфель и не только</div>
+    </div>
+    <div class="card card-green">
+      <div class="card-title">Готовый портфель собран</div>
+      <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M10,2H14A2,2 0 0,1 16,4V6H20A2,2 0 0,1 22,8V19A2,2 0 0,1 20,21H4A2,2 0 0,1 2,19V8A2,2 0 0,1 4,6H8V4A2,2 0 0,1 10,2M14,6V4H10V6H14M4,8V19H20V8H4M12,17A2,2 0 0,1 10,15A2,2 0 0,1 12,13A2,2 0 0,1 14,15A2,2 0 0,1 12,17Z"/></svg></div>
+      <div class="card-sublabel">Купить в один клик</div>
+    </div>
+  </div>
+
+  <!-- На карте -->
+  <div class="section-title">На карте</div>
+  <div class="cards-container">
+    <div class="card card-red">
+      <div class="card-title">Запланировать визит в банк</div>
+      <div class="card-sublabel">В новые отделения 📍</div>
+      <div class="card-icon alpha">A</div>
+    </div>
+    <div class="card card-blue">
+      <div class="card-title">Банкоматы</div>
+      <div class="card-sublabel">22 100 своих и партнеров</div>
+      <div style="display: flex; gap: 4px;">
+        <div style="width: 20px; height: 20px; background-color: #ff3b30; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; color: white;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20,8H4V6H20M20,18H4V12H20M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.1,4 20,4Z"/></svg></div>
+        <div style="width: 20px; height: 20px; background-color: #4caf50; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; color: white;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22S19,14.25 19,9A7,7 0 0,0 12,2Z"/></svg></div>
+      </div>
+    </div>
+    <div class="card card-green">
+      <div class="card-title">Отделения</div>
+      <div class="card-sublabel">400 по всей России</div>
+      <div class="card-icon alpha">A</div>
+    </div>
+  </div>
+
+  <!-- Мои платежи -->
+  <div class="section-title">Мои платежи</div>
+  <div class="cards-container">
+    <div class="card card-blue">
+      <div class="card-title">Подсказки</div>
+      <div class="card-sublabel">—</div>
+    </div>
+    <div class="card card-green">
+      <div class="card-title">Предстоящие платежи</div>
+      <div class="card-sublabel">—</div>
+    </div>
+  </div>
+ 
+
+  <button class="voice-btn" id="voiceBtn" title="Голосовой ассистент"><img src="micro1.png" alt="Голосовой ассистент" class="voice-btn-icon"></button>
+
+  <!-- Модальное окно голосового ассистента -->
+  <div class="voice-modal-overlay" id="voiceModal">
+    <div class="voice-modal">
+      <img src="micro1.png" alt="Голосовой ассистент" class="voice-modal-icon" id="voiceModalIcon">
+      <div class="voice-modal-title" id="voiceModalTitle">Альфа-ассистент</div>
+      <div class="voice-modal-subtitle" id="voiceModalSubtitle">Скажите команду для навигации</div>
+      <div class="voice-modal-text" id="voiceModalText">Говорите...</div>
+      <div class="voice-modal-actions">
+        <button class="voice-btn-small secondary" id="voiceCancel">Отмена</button>
+        <button class="voice-btn-small primary" id="voiceStop" style="display:none;">Остановить</button>
+      </div>
+    </div>
+  </div>
+   <div class="bottom-nav">
+    <div class="nav-item">
+      <a href="index.html"  class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg></a>
+      <div class="nav-label">Главная</div>
+    </div>
+    <div class="nav-item">
+      <a href="platezi.html" class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7,15H9C9,16.08 10.37,17 12,17C13.63,17 15,16.08 15,15C15,13.9 13.96,13.5 11.76,12.97C9.64,12.44 7,11.78 7,9C7,7.21 8.47,5.69 10.5,5.18V3H13.5V5.18C15.53,5.69 17,7.21 17,9H15C15,7.92 13.63,7 12,7C10.37,7 9,7.92 9,9C9,10.1 10.04,10.5 12.24,11.03C14.36,11.56 17,12.22 17,15C17,16.79 15.53,18.31 13.5,18.82V21H10.5V18.82C8.47,18.31 7,16.79 7,15Z"/></svg></a>
+      <div class="nav-label">Платежи</div>
+    </div>
+    <div class="nav-item">
+      <a href="vigoda.html" class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5 2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z"/></svg></a>
+      <div class="nav-label">Выгода</div>
+    </div>
+    <div class="nav-item">
+      <a href="history.html" class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/></svg></a>
+      <div class="nav-label">История</div>
+    </div>
+    <div class="nav-item">
+      <a href="chats.html" class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16Z"/></svg></a>
+      <div class="nav-label">Чаты</div>
+    </div>
+  </div>
+
+  <script src="index.js"></script>
+
+</body>
+</html>

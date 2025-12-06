@@ -1,0 +1,337 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+a {
+text-decoration:none;
+color:#ffffff
+}
+
+  body {
+    background-color: #121212;
+    color: white;
+    padding: 0;
+    max-width: 400px;
+    margin: 0 auto;
+    overflow-x: hidden;
+      padding-bottom: 80px; /* ←←← ОСНОВНОЕ ИЗМЕНЕНИЕ */
+  }
+
+  /* Шапка */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background-color: #121212;
+  }
+
+  .page-title {
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  .search-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #2d2d2d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+  }
+
+  /* Табы */
+  .tabs {
+    display: flex;
+    padding: 0 16px;
+    gap: 8px;
+    margin: 16px 0;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .tab.active {
+    background-color: white;
+    color: #121212;
+    font-weight: bold;
+  }
+
+  /* Карточки предложений */
+  .offers-container {
+    padding: 0 16px 16px;
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+  }
+
+  .offer-card {
+    min-width: 300px;
+    background-color: #2d2d2d;
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+
+  .offer-card:active {
+    transform: scale(0.98);
+  }
+
+  .offer-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+
+  .offer-desc {
+    font-size: 14px;
+    color: #ccc;
+    margin-bottom: 16px;
+  }
+
+  .offer-stats {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+
+  .stat-item {
+    background-color: #333;
+    padding: 4px 8px;
+    border-radius: 8px;
+  }
+
+  .offer-image {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    width: 80px;
+    height: 80px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  .offer-image.airplane {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iIzU1MDAwMCIgZD0iTTEyIDJjLTUuNTIgMC0xMCA0LjQ4LTEwIDEwczQuNDggMTAgMTAgMTBzMTAtNC40OCAxMC0xMHMtNC40OC0xMC0xMC0xMHptLTEgMTVjLTUuNSAwLTkgNC41LTkgOS41aC0ydjEyaDIwdi0xaC0ydjEtOWgtMWwtMi0ydi0xYzAtMS4xMS0uODktMi0yLTIuOTFMMTAgMTMuMDlsLTMtMy4wOXoiLz48L3N2Zz4=');
+  }
+
+  /* Раздел Кэшбэк */
+  .section-title {
+    padding: 16px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #ddd;
+  }
+
+  .cashback-card {
+    background-color: #2d2d2d;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 0 16px 16px;
+  }
+
+  .cashback-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .cashback-label {
+    font-size: 14px;
+    color: #aaa;
+  }
+
+  .cashback-info-icon {
+    font-size: 14px;
+    color: #888;
+    cursor: pointer;
+  }
+
+  .cashback-balance {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+
+  .spend-btn {
+    background-color: white;
+    color: #121212;
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  .cashback-action {
+    background-color: #003366;
+    padding: 12px 16px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    cursor: pointer;
+  }
+
+  .cashback-action-text {
+    font-size: 14px;
+  }
+
+  .arrow-right {
+    font-size: 16px;
+  }
+
+  .cashback-note {
+    background-color: #2d2d2d;
+    padding: 16px;
+    border-radius: 12px;
+    margin: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+  }
+
+  .note-emoji {
+    font-size: 24px;
+  }
+
+  .note-text {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  /* Действия внизу */
+  .actions-row {
+    display: flex;
+    padding: 16px;
+    gap: 8px;
+  }
+
+  .action-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .action-btn:active {
+    opacity: 0.8;
+  }
+
+  .action-btn.select {
+    background-color: #ffcccc;
+    color: #333;
+  }
+
+  .action-btn.receive {
+    background-color: #cce5ff;
+    color: #333;
+  }
+
+  .badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background-color: #ff3b30;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  /* Нижняя панель навигации */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #121212;
+    display: flex;
+    justify-content: space-around;
+    padding: 12px 0;
+    border-top: 1px solid #333;
+    z-index: 1000;
+  }
+
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 8px;
+    transition: color 0.2s;
+  }
+
+  .nav-item.active {
+    color: #007aff;
+  }
+
+  .nav-icon {
+    font-size: 20px;
+  }
+
+  .nav-label {
+    font-size: 12px;
+    text-align: center;
+  }
+
+  /* Прокрутка */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  /* Голосовой ассистент */
+  .voice-btn {
+    position: fixed;
+    right: 16px;
+    bottom: 88px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: #ff3b30;
+    color: #fff;
+    border: none;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    cursor: pointer;
+  }
+  .voice-btn.listening {
+    background-color: #00c853;
+    box-shadow: 0 0 0 0 rgba(0,200,83,0.7);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    to { box-shadow: 0 0 0 16px rgba(0,200,83,0); }
+  }

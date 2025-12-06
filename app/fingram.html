@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Финансовая грамотность</title>
+  <link rel="stylesheet" href="fstyle.css">
+</head>
+<body>
+  <div class="header">
+    <a href="index.html" class="back-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg></a>
+    <div>Финансовая грамотность</div>
+    <div></div>
+  </div>
+
+  <div class="page-title">Уроки</div>
+  <div id="lessons-container"></div>
+
+  <!-- Модалка теории -->
+  <div class="modal-overlay" id="theoryModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="theoryTitle"></div>
+        <div class="modal-close" id="theoryClose">×</div>
+      </div>
+      <div class="theory-content" id="theoryText"></div>
+      <button class="btn primary" id="startTestBtn" style="
+        background: #ff3b30; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; margin-top: 16px; width: 100%;
+      ">Начать тест</button>
+    </div>
+  </div>
+
+  <!-- Модалка вопроса -->
+  <div class="modal-overlay" id="questionModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="questionTitle"></div>
+        <div class="modal-close" id="questionClose">×</div>
+      </div>
+      <div class="question-text" id="questionText"></div>
+      <div class="options" id="questionOptions"></div>
+    </div>
+  </div>
+
+  <!-- Модалка результата -->
+  <div class="result-modal-overlay" id="resultModal">
+    <div class="result-modal">
+      <div class="result-icon" id="resultIcon"><svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"/></svg></div>
+      <div class="result-title" id="resultTitle">Отлично!</div>
+      <div class="result-text" id="resultText">Вы прошли урок!</div>
+      <button class="result-btn" id="resultClose">Продолжить</button>
+    </div>
+  </div>
+
+  </div>
+
+  <!-- Голосовой ассистент -->
+  <button class="voice-btn" id="voiceBtn" title="Голосовой ассистент"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12,14c1.66,0 2.99-1.34 2.99-3L15,5c0-1.66-1.34-3-3-3S9,3.34 9,5v6c0,1.66 1.34,3 3,3zm5.3-3c0,3-2.54,5.1-5.3,5.1S6.7,14 6.7,11H5c0,3.41 2.72,6.23 6,6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg></button>
+
+  <!-- Модальное окно голосового ассистента -->
+  <div class="voice-modal-overlay" id="voiceModal">
+    <div class="voice-modal">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="voice-modal-icon" id="voiceModalIcon"><path d="M12,14c1.66,0 2.99-1.34 2.99-3L15,5c0-1.66-1.34-3-3-3S9,3.34 9,5v6c0,1.66 1.34,3 3,3zm5.3-3c0,3-2.54,5.1-5.3,5.1S6.7,14 6.7,11H5c0,3.41 2.72,6.23 6,6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+      <div class="voice-modal-title" id="voiceModalTitle">Альфа-ассистент</div>
+      <div class="voice-modal-subtitle" id="voiceModalSubtitle">Скажите команду для навигации</div>
+      <div class="voice-modal-text" id="voiceModalText">Говорите...</div>
+      <div class="voice-modal-actions">
+        <button class="voice-btn-small secondary" id="voiceCancel">Отмена</button>
+        <button class="voice-btn-small primary" id="voiceStop" style="display:none;">Остановить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item">
+      <a href="index.html" class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg></a>
+      <div class="nav-label">Главная</div>
+    </div>
+    <div class="nav-item">
+      <a href="platezi.html" class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7,15H9C9,16.08 10.37,17 12,17C13.63,17 15,16.08 15,15C15,13.9 13.96,13.5 11.76,12.97C9.64,12.44 7,11.78 7,9C7,7.21 8.47,5.69 10.5,5.18V3H13.5V5.18C15.53,5.69 17,7.21 17,9H15C15,7.92 13.63,7 12,7C10.37,7 9,7.92 9,9C9,10.1 10.04,10.5 12.24,11.03C14.36,11.56 17,12.22 17,15C17,16.79 15.53,18.31 13.5,18.82V21H10.5V18.82C8.47,18.31 7,16.79 7,15Z"/></svg></a>
+      <div class="nav-label">Платежи</div>
+    </div>
+    <div class="nav-item">
+      <a href="vigoda.html" class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5 2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z"/></svg></a>
+      <div class="nav-label">Выгода</div>
+    </div>
+    <div class="nav-item active">
+      <a href="history.html" class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/></svg></a>
+      <div class="nav-label">История</div>
+    </div>
+    <div class="nav-item">
+      <a href="chats.html"  class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16Z"/></svg></a>
+      <div class="nav-label">Чаты</div>
+    </div>
+  </div>
+
+  <script src="fjs.js"></script>
+
+  </script>
+</body>
+</html>
