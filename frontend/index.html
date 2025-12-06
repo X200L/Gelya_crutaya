@@ -655,6 +655,126 @@
             font-style: italic;
         }
 
+        /* Стили для текстового чата */
+        .text-chat-container {
+            margin-top: 30px;
+            padding: 20px;
+            background: var(--bg-secondary);
+            border-radius: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .text-chat-header {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .text-chat-input-container {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .text-chat-input {
+            flex: 1;
+            padding: 12px 15px;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 1em;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 60px;
+            transition: all 0.3s;
+        }
+
+        .text-chat-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 10px rgba(239, 49, 36, 0.3);
+        }
+
+        .text-chat-send-btn {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-color-light) 100%);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 50px;
+            height: 50px;
+            box-shadow: 0 4px 15px rgba(239, 49, 36, 0.4);
+        }
+
+        .text-chat-send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(239, 49, 36, 0.6);
+        }
+
+        .text-chat-send-btn:active {
+            transform: translateY(0);
+        }
+
+        .text-chat-send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .text-chat-response {
+            margin-top: 20px;
+            padding: 15px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .text-chat-response-label {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: var(--accent-color);
+            margin-bottom: 10px;
+        }
+
+        .text-chat-response-text {
+            color: var(--text-primary);
+            font-size: 1em;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .text-chat-response-text h1 {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin: 15px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 2px solid var(--accent-color);
+        }
+
+        .text-chat-response-text h2 {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: var(--accent-color-light);
+            margin: 12px 0 8px 0;
+            padding-bottom: 3px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .text-chat-response-text h3 {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 10px 0 6px 0;
+        }
 
         .welcome-title {
             font-size: 2.5em;
@@ -986,6 +1106,28 @@
 
             <div class="instruction">
                 Нажмите кнопку микрофона для начала записи, нажмите еще раз для остановки
+            </div>
+
+            <!-- Текстовый блок для запросов -->
+            <div class="text-chat-container">
+                <div class="text-chat-header">Текстовый запрос</div>
+                <div class="text-chat-input-container">
+                    <textarea 
+                        id="textInput" 
+                        class="text-chat-input" 
+                        placeholder="Введите ваш вопрос..."
+                        rows="3"
+                    ></textarea>
+                    <button class="text-chat-send-btn" id="textSendBtn" onclick="sendTextMessage()">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px; fill: white;">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="text-chat-response" id="textResponse" style="display: none;">
+                    <div class="text-chat-response-label">Ответ:</div>
+                    <div class="text-chat-response-text" id="textResponseText"></div>
+                </div>
             </div>
 
             <div class="error" id="error"></div>
@@ -1795,6 +1937,102 @@
             };
         }
 
+        // Отправка текстового сообщения
+        async function sendTextMessage() {
+            const textInput = document.getElementById('textInput');
+            const textSendBtn = document.getElementById('textSendBtn');
+            const textResponse = document.getElementById('textResponse');
+            const textResponseText = document.getElementById('textResponseText');
+            
+            const message = textInput.value.trim();
+            
+            if (!message) {
+                showError('Введите ваш вопрос');
+                return;
+            }
+            
+            // Блокируем кнопку и поле ввода
+            textSendBtn.disabled = true;
+            textInput.disabled = true;
+            status.textContent = 'Обработка запроса...';
+            status.className = 'status processing';
+            
+            // Скрываем предыдущий ответ
+            textResponse.style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                if (!response.ok) {
+                    let errorMessage = 'Ошибка обработки запроса';
+                    try {
+                        const error = await response.json();
+                        errorMessage = error.error || errorMessage;
+                    } catch (e) {
+                        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                    }
+                    throw new Error(errorMessage);
+                }
+                
+                const data = await response.json();
+                const reply = data.reply || 'Не удалось получить ответ';
+                
+                // Конвертируем markdown заголовки в HTML
+                const htmlReply = convertMarkdownToHtml(reply);
+                
+                // Показываем ответ
+                textResponseText.innerHTML = htmlReply;
+                textResponse.style.display = 'block';
+                
+                // Очищаем поле ввода
+                textInput.value = '';
+                
+                status.textContent = 'Готов к работе';
+                status.className = 'status idle';
+                
+            } catch (error) {
+                console.error('Error sending text message:', error);
+                showError(error.message || 'Ошибка отправки сообщения');
+                status.textContent = 'Ошибка';
+                status.className = 'status error';
+            } finally {
+                // Разблокируем кнопку и поле ввода
+                textSendBtn.disabled = false;
+                textInput.disabled = false;
+                textInput.focus();
+            }
+        }
+        
+        // Конвертация markdown заголовков в HTML
+        function convertMarkdownToHtml(text) {
+            if (!text) return '';
+            
+            // Экранируем HTML для безопасности
+            let html = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            
+            // Конвертируем markdown заголовки (сначала h3, потом h2, потом h1, чтобы избежать конфликтов)
+            // ### Заголовок 3
+            html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+            // ## Заголовок 2
+            html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+            // # Заголовок 1
+            html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+            
+            // Конвертируем переносы строк в <br>
+            html = html.replace(/\n/g, '<br>');
+            
+            return html;
+        }
+        
         // Показ ошибки
         function showError(message) {
             errorDiv.textContent = 'Ошибка: ' + message;
@@ -1881,6 +2119,18 @@
             mainMenu.style.display = 'none';
             // Скрываем экран обратной связи
             feedbackScreen.classList.remove('active');
+            
+            // Обработчик Enter для отправки текстового сообщения
+            const textInput = document.getElementById('textInput');
+            if (textInput) {
+                textInput.addEventListener('keydown', function(e) {
+                    // Shift+Enter для новой строки, Enter для отправки
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendTextMessage();
+                    }
+                });
+            }
             
             // Проверяем обновления после загрузки
             setTimeout(checkForUpdates, 1000);
