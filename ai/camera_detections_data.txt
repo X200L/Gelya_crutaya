@@ -1,0 +1,97 @@
+Camera Detection Statistics
+Total frames: 1210
+FPS: 30
+Resolution: 1920x1080
+
+Detections by class:
+==================================================
+
+person: 1550 total detections
+  Found in 1110 frames
+
+toothbrush: 52 total detections
+  Found in 46 frames
+
+laptop: 302 total detections
+  Found in 113 frames
+
+cell phone: 44 total detections
+  Found in 42 frames
+
+remote: 8 total detections
+  Found in 8 frames
+
+fork: 1 total detections
+  Found in 1 frames
+
+chair: 443 total detections
+  Found in 102 frames
+
+tv: 6 total detections
+  Found in 5 frames
+
+cup: 33 total detections
+  Found in 33 frames
+
+dining table: 149 total detections
+  Found in 73 frames
+
+bottle: 21 total detections
+  Found in 20 frames
+
+couch: 2 total detections
+  Found in 2 frames
+
+keyboard: 7 total detections
+  Found in 7 frames
+
+bed: 2 total detections
+  Found in 2 frames
+
+baseball bat: 14 total detections
+  Found in 14 frames
+
+mouse: 11 total detections
+  Found in 11 frames
+
+book: 2 total detections
+  Found in 2 frames
+
+bowl: 1 total detections
+  Found in 1 frames
+
+baseball glove: 1 total detections
+  Found in 1 frames
+
+dog: 13 total detections
+  Found in 13 frames
+
+banana: 2 total detections
+  Found in 2 frames
+
+bear: 1 total detections
+  Found in 1 frames
+
+elephant: 30 total detections
+  Found in 30 frames
+
+apple: 2 total detections
+  Found in 2 frames
+
+frisbee: 5 total detections
+  Found in 5 frames
+
+cow: 15 total detections
+  Found in 15 frames
+
+bird: 1 total detections
+  Found in 1 frames
+
+horse: 1 total detections
+  Found in 1 frames
+
+cat: 1 total detections
+  Found in 1 frames
+
+tie: 1 total detections
+  Found in 1 frames

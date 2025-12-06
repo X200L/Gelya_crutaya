@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alfa Vision - Система подсчета людей</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>ALFA VISION</h1>
+                <div style="font-size: 0.9em; color: var(--text-secondary); margin-top: 5px;">
+                    Система подсчета людей в помещении
+                </div>
+            </div>
+            <div class="status-indicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Подключение...</span>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="video-section">
+                <h2>Видеопоток</h2>
+                <div class="video-container">
+                    <img id="videoStream" src="/video_feed" alt="Video Stream">
+                </div>
+                <div class="current-stats">
+                    <div class="stat-card">
+                        <div class="stat-label">Людей в помещении</div>
+                        <div class="stat-value" id="currentCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Время обновления</div>
+                        <div class="stat-value" id="lastUpdate">--:--:--</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-section">
+                <h2>Настройки</h2>
+                <div class="settings-panel">
+                    <label for="intervalSelect">Интервал статистики:</label>
+                    <select id="intervalSelect">
+                        <option value="60">Каждую минуту</option>
+                        <option value="3600">Каждый час</option>
+                    </select>
+                    <button id="saveSettings" class="btn-primary">Сохранить</button>
+                </div>
+                <div class="export-panel">
+                    <button id="exportBtn" class="btn-secondary">Экспорт статистики</button>
+                </div>
+            </div>
+
+            <div class="statistics-section">
+                <h2>История статистики</h2>
+                <div class="chart-container">
+                    <canvas id="statisticsChart"></canvas>
+                </div>
+                <div class="statistics-table">
+                    <table id="statsTable">
+                        <thead>
+                            <tr>
+                                <th>Время</th>
+                                <th>Количество людей</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
