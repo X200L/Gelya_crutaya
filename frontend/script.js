@@ -239,25 +239,55 @@
             }
         }
 
+        // Получение getUserMedia с поддержкой старых браузеров и iOS
+        function getUserMedia(constraints) {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const userAgent = navigator.userAgent;
+            
+            console.log('getUserMedia called. iOS:', isIOS, 'UserAgent:', userAgent);
+            console.log('navigator.mediaDevices:', navigator.mediaDevices);
+            console.log('navigator.mediaDevices.getUserMedia:', navigator.mediaDevices?.getUserMedia);
+            
+            // Для современных браузеров (включая iOS Safari 11+)
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                console.log('Using navigator.mediaDevices.getUserMedia');
+                return navigator.mediaDevices.getUserMedia(constraints);
+            }
+            
+            // Fallback для старых браузеров (но не для iOS, там это не работает)
+            const getUserMediaLegacy = navigator.getUserMedia ||
+                navigator.webkitGetUserMedia ||
+                navigator.mozGetUserMedia ||
+                navigator.msGetUserMedia;
+            
+            if (!getUserMediaLegacy) {
+                // Для iOS Safari, если mediaDevices нет, это означает очень старую версию
+                if (isIOS) {
+                    console.error('iOS device detected but no getUserMedia support found');
+                    throw new Error('Ваша версия iOS Safari не поддерживает запись аудио. Пожалуйста, обновите iOS до версии 11 или выше.');
+                }
+                console.error('No getUserMedia support found');
+                throw new Error('Ваш браузер не поддерживает запись аудио. Пожалуйста, используйте современный браузер (Chrome, Firefox, Safari).');
+            }
+            
+            console.log('Using legacy getUserMedia');
+            // Обертка для legacy API
+            return new Promise((resolve, reject) => {
+                getUserMediaLegacy.call(navigator, constraints, resolve, reject);
+            });
+        }
+
         // Инициализация записи
         async function initRecording() {
             try {
-                // Проверяем поддержку getUserMedia
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    // Fallback для старых браузеров и iOS
-                    navigator.mediaDevices = navigator.mediaDevices || {};
-                    navigator.mediaDevices.getUserMedia = navigator.mediaDevices.getUserMedia ||
-                        navigator.webkitGetUserMedia ||
-                        navigator.mozGetUserMedia ||
-                        navigator.msGetUserMedia;
-                    
-                    if (!navigator.mediaDevices.getUserMedia) {
-                        throw new Error('Ваш браузер не поддерживает запись аудио');
-                    }
-                }
-
-                // Для iOS Safari используем более простые настройки аудио
                 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                
+                // Проверяем, что мы на HTTPS или localhost (требуется для getUserMedia на iOS)
+                if (isIOS && location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                    throw new Error('Для работы микрофона на iOS требуется HTTPS соединение. Пожалуйста, откройте сайт по HTTPS.');
+                }
+                
+                // Для iOS Safari используем более простые настройки аудио
                 const audioConstraints = isIOS ? {
                     audio: {
                         echoCancellation: true,
@@ -275,7 +305,8 @@
                     }
                 };
 
-                const stream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+                // Используем универсальную функцию getUserMedia
+                const stream = await getUserMedia(audioConstraints);
                 
                 mediaStream = stream;
                 
@@ -292,28 +323,42 @@
             } catch (err) {
                 console.error('Microphone initialization error:', err);
                 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-                let errorMessage = 'Ошибка доступа к микрофону. ';
+                let errorMessage = '';
                 
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                // Проверяем, есть ли уже сообщение об ошибке в тексте ошибки
+                if (err.message && err.message.includes('не поддерживает запись аудио')) {
+                    errorMessage = err.message;
+                } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
                     if (isIOS) {
-                        errorMessage += 'Пожалуйста, разрешите доступ к микрофону в настройках Safari (Настройки > Safari > Микрофон).';
+                        errorMessage = 'Доступ к микрофону запрещен. Пожалуйста, разрешите доступ к микрофону в настройках Safari (Настройки > Safari > Микрофон) или нажмите на иконку микрофона в адресной строке Safari.';
                     } else {
-                        errorMessage += 'Пожалуйста, разрешите доступ к микрофону в настройках браузера.';
+                        errorMessage = 'Доступ к микрофону запрещен. Пожалуйста, разрешите доступ к микрофону в настройках браузера.';
                     }
                 } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-                    errorMessage += 'Микрофон не найден. Проверьте подключение устройства.';
-                } else if (err.name === 'NotSupportedError') {
+                    errorMessage = 'Микрофон не найден. Проверьте подключение устройства.';
+                } else if (err.name === 'NotSupportedError' || err.name === 'NotReadableError' || err.name === 'OverconstrainedError') {
                     if (isIOS) {
-                        errorMessage += 'Убедитесь, что вы используете Safari и дали разрешение на доступ к микрофону.';
+                        // На iOS NotSupportedError обычно означает проблему с разрешениями или настройками
+                        errorMessage = 'Ошибка доступа к микрофону на iOS. Убедитесь, что: 1) Вы используете Safari (не Chrome), 2) Сайт открыт по HTTPS, 3) Вы дали разрешение на микрофон (иконка в адресной строке), 4) Микрофон не занят другим приложением.';
                     } else {
-                        errorMessage += 'Ваш браузер не поддерживает запись аудио. Попробуйте использовать Chrome или Firefox.';
+                        errorMessage = 'Ваш браузер не поддерживает запись аудио или микрофон занят другим приложением. Попробуйте использовать Chrome или Firefox.';
                     }
-                } else if (err.name === 'TypeError' && err.message.includes('getUserMedia')) {
-                    errorMessage += 'Ошибка инициализации микрофона. Убедитесь, что вы используете HTTPS или localhost.';
+                } else if (err.name === 'TypeError' || (err.message && err.message.includes('getUserMedia'))) {
+                    if (isIOS) {
+                        errorMessage = 'Ошибка инициализации микрофона. Убедитесь, что вы используете Safari и сайт открыт по HTTPS (не HTTP).';
+                    } else {
+                        errorMessage = 'Ошибка инициализации микрофона. Убедитесь, что вы используете HTTPS или localhost.';
+                    }
                 } else if (err.message && err.message.includes('Web Audio API')) {
-                    errorMessage += 'Ошибка инициализации аудио системы. Попробуйте обновить страницу и нажать кнопку микрофона еще раз.';
+                    errorMessage = 'Ошибка инициализации аудио системы. Попробуйте обновить страницу и нажать кнопку микрофона еще раз.';
+                } else if (err.message) {
+                    errorMessage = err.message;
                 } else {
-                    errorMessage += err.message || 'Попробуйте обновить страницу и нажать кнопку микрофона еще раз.';
+                    if (isIOS) {
+                        errorMessage = 'Ошибка доступа к микрофону. Убедитесь, что вы используете Safari, дали разрешение на микрофон и сайт открыт по HTTPS.';
+                    } else {
+                        errorMessage = 'Ошибка доступа к микрофону. Попробуйте обновить страницу и нажать кнопку микрофона еще раз.';
+                    }
                 }
                 
                 showError(errorMessage);
@@ -371,24 +416,32 @@
         // Инициализация Web Audio API (для Safari и iOS)
         async function initWebAudioRecorder(stream) {
             try {
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
                 const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                
                 if (!AudioContextClass) {
-                    throw new Error('Web Audio API не поддерживается');
+                    const errorMsg = isIOS 
+                        ? 'Web Audio API не поддерживается. Убедитесь, что вы используете Safari и обновили iOS до последней версии.'
+                        : 'Web Audio API не поддерживается вашим браузером.';
+                    throw new Error(errorMsg);
                 }
                 
                 // Для iOS нужно использовать sampleRate по умолчанию или разрешенный
                 // iOS Safari обычно поддерживает 44100 или 48000, но не 16000 напрямую
                 // Мы будем записывать с нативной частотой и ресемплировать при необходимости
-                audioContext = new AudioContextClass();
+                try {
+                    audioContext = new AudioContextClass();
+                } catch (e) {
+                    console.error('Failed to create AudioContext:', e);
+                    throw new Error('Не удалось создать аудио контекст. Убедитесь, что вы используете Safari на iOS.');
+                }
+                
+                console.log('AudioContext created. State:', audioContext.state, 'Sample rate:', audioContext.sampleRate);
                 
                 // Проверяем, что контекст не приостановлен (iOS требует user gesture)
                 if (audioContext.state === 'suspended') {
-                    // Пытаемся возобновить (требует user gesture)
-                    try {
-                        await audioContext.resume();
-                    } catch (e) {
-                        console.warn('Could not resume audio context:', e);
-                    }
+                    console.log('AudioContext is suspended, will resume on user gesture');
+                    // Не пытаемся возобновить здесь, это будет сделано при нажатии кнопки
                 }
                 
                 const source = audioContext.createMediaStreamSource(stream);
@@ -396,7 +449,13 @@
                 // Создаем ScriptProcessorNode для записи (deprecated, но работает в Safari/iOS)
                 // Используем bufferSize 4096 для лучшей производительности
                 const bufferSize = 4096;
-                const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+                let processor;
+                try {
+                    processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+                } catch (e) {
+                    console.error('Failed to create ScriptProcessor:', e);
+                    throw new Error('Не удалось создать процессор аудио. Возможно, ваша версия iOS Safari слишком старая.');
+                }
                 
                 processor.onaudioprocess = (e) => {
                     if (isRecording) {
@@ -420,6 +479,10 @@
                 console.log('Web Audio API recorder initialized for Safari/iOS. Sample rate:', audioContext.sampleRate);
             } catch (err) {
                 console.error('Web Audio API initialization error:', err);
+                // Передаем более понятное сообщение об ошибке
+                if (err.message && !err.message.includes('Web Audio API')) {
+                    throw new Error('Ошибка инициализации аудио: ' + err.message);
+                }
                 throw err;
             }
         }
