@@ -946,6 +946,16 @@
                 status.textContent = 'Отправка на сервер...';
                 status.className = 'status processing';
                 
+                // Проверяем, что FormData создан правильно
+                if (!formData || !wavBlob) {
+                    throw new Error('Ошибка подготовки данных для отправки');
+                }
+                
+                // Проверяем URL перед отправкой
+                if (!API_URL || !API_URL.includes('/api')) {
+                    throw new Error('Ошибка конфигурации: неправильный URL API');
+                }
+                
                 // Создаем AbortController для таймаута (fallback для старых браузеров)
                 let abortController = null;
                 let timeoutId = null;
@@ -975,15 +985,26 @@
                     credentials: fetchOptions.credentials
                 });
                 
+                // Обновляем статус перед отправкой
+                status.textContent = 'Отправка запроса...';
+                
                 let response;
                 try {
-                    console.log('Initiating fetch request...');
+                    console.log('Initiating fetch request to:', `${API_URL}/voice-assistant`);
+                    
+                    // Показываем пользователю, что запрос отправляется
+                    status.textContent = 'Отправка запроса на сервер...';
+                    
                     response = await fetch(`${API_URL}/voice-assistant`, fetchOptions);
+                    
                     console.log('Fetch request completed');
                     // Очищаем таймаут если запрос успешен
                     if (timeoutId) {
                         clearTimeout(timeoutId);
                     }
+                    
+                    // Обновляем статус после получения ответа
+                    status.textContent = 'Ответ получен, обработка...';
                 } catch (err) {
                     // Очищаем таймаут при ошибке
                     if (timeoutId) {
@@ -994,14 +1015,22 @@
                     console.error('Error message:', err.message);
                     console.error('Error stack:', err.stack);
                     
+                    // Формируем понятное сообщение об ошибке для пользователя
+                    let userErrorMessage = 'Ошибка отправки запроса';
+                    
                     // Более детальная обработка ошибок для iOS
-                    if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
-                        throw new Error(`Не удалось подключиться к серверу. Проверьте:\n1. Сервер запущен на ${API_URL}\n2. Соединение по HTTPS работает\n3. Сертификат принят в браузере`);
+                    if (err.name === 'TypeError' && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
+                        userErrorMessage = `Не удалось подключиться к серверу. Возможные причины:\n1. Сервер не запущен\n2. Проблема с HTTPS соединением\n3. Сертификат не принят в браузере\n\nПопробуйте обновить страницу и принять сертификат безопасности.`;
                     } else if (err.name === 'AbortError' || err.name === 'TimeoutError') {
-                        throw new Error('Превышено время ожидания ответа от сервера. Попробуйте еще раз.');
+                        userErrorMessage = 'Превышено время ожидания ответа от сервера. Попробуйте еще раз.';
+                    } else if (err.name === 'TypeError') {
+                        userErrorMessage = `Ошибка сети: ${err.message || 'Не удалось отправить запрос'}. Проверьте подключение к интернету и доступность сервера.`;
                     } else {
-                        throw new Error(`Ошибка сети: ${err.message || err.name}. Проверьте подключение к серверу ${API_URL}`);
+                        userErrorMessage = `Ошибка: ${err.message || err.name || 'Неизвестная ошибка'}`;
                     }
+                    
+                    // Пробрасываем ошибку дальше - она будет обработана во внешнем catch
+                    throw new Error(userErrorMessage);
                 }
 
                 console.log('Response received. Status:', response.status, response.statusText);
@@ -1200,11 +1229,30 @@
         
         // Показ ошибки
         function showError(message) {
-            errorDiv.textContent = 'Ошибка: ' + message;
+            // Убеждаемся, что errorDiv существует
+            if (!errorDiv) {
+                console.error('Error div not found! Message:', message);
+                // Показываем через alert как fallback
+                alert('Ошибка: ' + message);
+                return;
+            }
+            
+            // Заменяем переносы строк на пробелы для отображения
+            const displayMessage = message.replace(/\n/g, ' ');
+            errorDiv.textContent = 'Ошибка: ' + displayMessage;
             errorDiv.classList.add('show');
+            
+            // Показываем ошибку дольше для важных сообщений
+            const timeout = message.includes('сервер') || message.includes('подключ') ? 10000 : 5000;
+            
             setTimeout(() => {
-                errorDiv.classList.remove('show');
-            }, 5000);
+                if (errorDiv) {
+                    errorDiv.classList.remove('show');
+                }
+            }, timeout);
+            
+            // Также логируем в консоль
+            console.error('Error shown to user:', message);
         }
 
         // Версия приложения для предотвращения кэширования
