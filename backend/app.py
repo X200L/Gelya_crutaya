@@ -22,7 +22,14 @@ else:
     print("Loaded .env from current directory or default location")
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
-CORS(app)
+# Настройка CORS для работы с HTTPS
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # API Keys from environment variables
 GIGACHAT_AUTH_KEY = os.getenv('GIGACHAT_AUTH_KEY')
@@ -140,6 +147,25 @@ def get_salute_speech_token(force_refresh=False):
 def index():
     """Главная страница - отдаем фронтенд"""
     return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    """Отдача статических файлов (CSS, JS, изображения)"""
+    # Не обрабатываем API маршруты здесь
+    if path.startswith('api/'):
+        return jsonify({'error': 'Not found'}), 404
+    
+    # Безопасность: проверяем, что путь не содержит опасные символы
+    if '..' in path:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    # Проверяем существование файла
+    file_path = os.path.join(app.static_folder, path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return send_from_directory(app.static_folder, path)
+    else:
+        # Если файл не найден, возвращаем index.html для SPA
+        return send_from_directory(app.static_folder, 'index.html')
 
 
 @app.route('/api/health', methods=['GET'])
