@@ -636,12 +636,22 @@ if __name__ == '__main__':
                     print(f"Could not detect server IP: {e}")
                     server_ip = '127.0.0.1'
                 
-                if not os.path.exists(cert_file) or not os.path.exists(key_file):
-                    print("Creating self-signed SSL certificate for development...")
-                    # Создаем конфигурационный файл для OpenSSL с IP в SAN
-                    config_file = os.path.join(cert_dir, 'openssl.conf')
-                    with open(config_file, 'w') as f:
-                        f.write(f"""[req]
+                # Удаляем старые сертификаты, если они есть, чтобы пересоздать с правильными настройками
+                if os.path.exists(cert_file) or os.path.exists(key_file):
+                    print("Removing old SSL certificates to recreate with correct settings...")
+                    try:
+                        if os.path.exists(cert_file):
+                            os.remove(cert_file)
+                        if os.path.exists(key_file):
+                            os.remove(key_file)
+                    except Exception as e:
+                        print(f"Warning: Could not remove old certificates: {e}")
+                
+                print("Creating self-signed SSL certificate for development...")
+                # Создаем конфигурационный файл для OpenSSL с IP в SAN
+                config_file = os.path.join(cert_dir, 'openssl.conf')
+                with open(config_file, 'w') as f:
+                    config_content = f"""[req]
 distinguished_name = req_distinguished_name
 req_extensions = v3_req
 prompt = no
@@ -650,7 +660,8 @@ prompt = no
 CN = {server_ip}
 
 [v3_req]
-keyUsage = keyEncipherment, dataEncipherment
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
 extendedKeyUsage = serverAuth
 subjectAltName = @alt_names
 
@@ -658,7 +669,8 @@ subjectAltName = @alt_names
 IP.1 = {server_ip}
 IP.2 = 127.0.0.1
 DNS.1 = localhost
-""")
+"""
+                    f.write(config_content)
                     
                     # Создаем самоподписанный сертификат с IP адресом
                     try:
