@@ -83,6 +83,47 @@ def get_gigachat_token(force_refresh=False):
         return None
 
 
+def extract_pcm_from_wav(wav_data):
+    """Извлекает PCM данные из WAV файла"""
+    try:
+        # Проверяем, что это WAV файл
+        if len(wav_data) < 12:
+            return None
+        
+        # Проверяем заголовок RIFF
+        if wav_data[0:4] != b'RIFF':
+            # Если это не WAV, возвращаем данные как есть (может быть уже PCM)
+            return wav_data
+        
+        if wav_data[8:12] != b'WAVE':
+            return None
+        
+        # Ищем чанк "data"
+        offset = 12
+        while offset < len(wav_data) - 8:
+            chunk_id = wav_data[offset:offset+4]
+            chunk_size = int.from_bytes(wav_data[offset+4:offset+8], byteorder='little')
+            
+            if chunk_id == b'data':
+                # Нашли чанк данных, извлекаем PCM
+                pcm_data = wav_data[offset+8:offset+8+chunk_size]
+                print(f"Extracted PCM data: {len(pcm_data)} bytes from WAV file")
+                return pcm_data
+            
+            # Переходим к следующему чанку
+            offset += 8 + chunk_size
+        
+        # Если не нашли чанк data, пробуем стандартный заголовок (44 байта)
+        if len(wav_data) > 44:
+            print("WAV data chunk not found, using standard 44-byte header offset")
+            return wav_data[44:]
+        
+        return None
+    except Exception as e:
+        print(f"Error extracting PCM from WAV: {e}")
+        return None
+
+
 def get_salute_speech_token(force_refresh=False):
     """Получить токен доступа для Salute Speech"""
     global salute_speech_token
@@ -181,6 +222,13 @@ def transcribe():
     
     try:
         audio_data = audio_file.read()
+        
+        # Извлекаем PCM данные из WAV файла, если это WAV
+        pcm_data = extract_pcm_from_wav(audio_data)
+        if pcm_data is None:
+            # Если не удалось извлечь PCM, используем исходные данные
+            pcm_data = audio_data
+        
         # Параметры для распознавания
         params = {
             'format': 'pcm16',
@@ -191,7 +239,7 @@ def transcribe():
         response = requests.post(
             url,
             headers=headers,
-            data=audio_data,
+            data=pcm_data,
             params=params,
             verify=False,
             timeout=30
@@ -375,6 +423,15 @@ def voice_assistant():
         print(f"Audio data size: {len(audio_data)} bytes")  # Для отладки
         print(f"Audio filename: {audio_file.filename}, Content-Type: {audio_file.content_type}")  # Для отладки
         
+        # Извлекаем PCM данные из WAV файла, если это WAV
+        pcm_data = extract_pcm_from_wav(audio_data)
+        if pcm_data is None:
+            # Если не удалось извлечь PCM, используем исходные данные
+            print("Warning: Could not extract PCM from WAV, using raw data")
+            pcm_data = audio_data
+        else:
+            print(f"PCM data extracted: {len(pcm_data)} bytes")
+        
         # API Salute Speech требует специфический Content-Type для PCM
         # Формат: audio/x-pcm;bit=16;rate=16000
         headers_stt = {
@@ -389,12 +446,11 @@ def voice_assistant():
             'channels': 1
         }
         
-        # Если это не PCM, пробуем без указания формата (API может определить автоматически)
-        # или используем другой формат
+        # Отправляем PCM данные в API Salute Speech
         response_stt = requests.post(
             url_stt,
             headers=headers_stt,
-            data=audio_data,
+            data=pcm_data,
             params=params_stt,
             verify=False,
             timeout=30
@@ -412,7 +468,7 @@ def voice_assistant():
                 response_stt = requests.post(
                     url_stt,
                     headers=headers_stt,
-                    data=audio_data,
+                    data=pcm_data,
                     params=params_stt,
                     verify=False,
                     timeout=30
