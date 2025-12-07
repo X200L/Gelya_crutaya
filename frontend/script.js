@@ -805,6 +805,12 @@
             isRecording = true;
             console.log('Recording started (MediaRecorder)');
             
+            // Скрываем предыдущий ответ
+            const voiceResponseContainer = document.getElementById('voiceResponseContainer');
+            if (voiceResponseContainer) {
+                voiceResponseContainer.style.display = 'none';
+            }
+            
             recordingStartTime = Date.now();
             recordingTimer = setInterval(() => {
                 const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
@@ -864,6 +870,12 @@
             recordBtn.classList.add('recording');
             status.className = 'status recording';
             errorDiv.classList.remove('show');
+            
+            // Скрываем предыдущий ответ
+            const voiceResponseContainer = document.getElementById('voiceResponseContainer');
+            if (voiceResponseContainer) {
+                voiceResponseContainer.style.display = 'none';
+            }
             
             console.log('Recording started (Web Audio API). Sample rate:', audioContext.sampleRate);
             
@@ -1322,6 +1334,24 @@
 
                 const result = await response.json();
                 console.log('Response received successfully. Audio length:', result.audio ? result.audio.length : 0);
+                console.log('Response text:', result.text);
+                console.log('Response reply:', result.reply);
+
+                // Отображаем текстовый ответ, если он есть
+                const voiceResponseContainer = document.getElementById('voiceResponseContainer');
+                const voiceResponseText = document.getElementById('voiceResponseText');
+                
+                if (result.reply && voiceResponseContainer && voiceResponseText) {
+                    // Конвертируем markdown заголовки в HTML
+                    const htmlReply = convertMarkdownToHtml(result.reply);
+                    voiceResponseText.innerHTML = htmlReply;
+                    voiceResponseContainer.style.display = 'block';
+                } else if (result.text && voiceResponseContainer && voiceResponseText) {
+                    // Если нет reply, но есть text (распознанный текст), показываем его
+                    const htmlText = convertMarkdownToHtml(result.text);
+                    voiceResponseText.innerHTML = htmlText;
+                    voiceResponseContainer.style.display = 'block';
+                }
 
                 // Конвертируем base64 обратно в blob и автоматически воспроизводим
                 if (result.audio) {
