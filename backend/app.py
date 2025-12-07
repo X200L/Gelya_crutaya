@@ -148,25 +148,6 @@ def index():
     """Главная страница - отдаем фронтенд"""
     return send_from_directory(app.static_folder, 'index.html')
 
-@app.route('/<path:path>')
-def serve_static(path):
-    """Отдача статических файлов (CSS, JS, изображения)"""
-    # Не обрабатываем API маршруты здесь
-    if path.startswith('api/'):
-        return jsonify({'error': 'Not found'}), 404
-    
-    # Безопасность: проверяем, что путь не содержит опасные символы
-    if '..' in path:
-        return jsonify({'error': 'Invalid path'}), 400
-    
-    # Проверяем существование файла
-    file_path = os.path.join(app.static_folder, path)
-    if os.path.exists(file_path) and os.path.isfile(file_path):
-        return send_from_directory(app.static_folder, path)
-    else:
-        # Если файл не найден, возвращаем index.html для SPA
-        return send_from_directory(app.static_folder, 'index.html')
-
 
 @app.route('/api/health', methods=['GET'])
 def health():
@@ -587,6 +568,30 @@ def voice_assistant():
         import traceback
         traceback.print_exc()
         return jsonify({'error': error_msg, 'type': type(e).__name__}), 500
+
+
+# Маршрут для статических файлов должен быть последним
+# Flask автоматически обрабатывает статические файлы через static_folder,
+# но этот маршрут нужен для SPA (возвращает index.html для всех не-API путей)
+@app.route('/<path:path>')
+def serve_static_or_spa(path):
+    """Отдача статических файлов или index.html для SPA
+    Этот маршрут должен быть последним, чтобы не перехватывать API запросы"""
+    # Не обрабатываем API маршруты здесь
+    if path.startswith('api/'):
+        return jsonify({'error': 'Not found'}), 404
+    
+    # Безопасность: проверяем, что путь не содержит опасные символы
+    if '..' in path:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    # Проверяем существование файла
+    file_path = os.path.join(app.static_folder, path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return send_from_directory(app.static_folder, path)
+    else:
+        # Если файл не найден, возвращаем index.html для SPA
+        return send_from_directory(app.static_folder, 'index.html')
 
 
 if __name__ == '__main__':
