@@ -896,8 +896,86 @@
             return arrayBuffer;
         }
 
+        // Отправка через XMLHttpRequest (fallback для iOS)
+        function sendViaXHR(url, formData, timeoutId) {
+            return new Promise((resolve, reject) => {
+                console.log('XHR: Creating XMLHttpRequest...');
+                const xhr = new XMLHttpRequest();
+                
+                xhr.onload = function() {
+                    console.log('XHR: onload fired, status:', xhr.status);
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                    }
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const response = {
+                                ok: true,
+                                status: xhr.status,
+                                statusText: xhr.statusText,
+                                json: async () => JSON.parse(xhr.responseText),
+                                text: async () => xhr.responseText,
+                                headers: {
+                                    get: (name) => xhr.getResponseHeader(name),
+                                    entries: () => {
+                                        const headers = {};
+                                        const headerStr = xhr.getAllResponseHeaders();
+                                        const headerPairs = headerStr.split('\r\n');
+                                        for (let i = 0; i < headerPairs.length; i++) {
+                                            const headerPair = headerPairs[i];
+                                            if (headerPair) {
+                                                const [key, value] = headerPair.split(': ');
+                                                headers[key.toLowerCase()] = value;
+                                            }
+                                        }
+                                        return Object.entries(headers);
+                                    }
+                                }
+                            };
+                            console.log('XHR: Resolving with response');
+                            resolve(response);
+                        } catch (e) {
+                            console.error('XHR: Error parsing response:', e);
+                            reject(new Error('Failed to parse XHR response: ' + e.message));
+                        }
+                    } else {
+                        console.error('XHR: Error status:', xhr.status);
+                        reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    console.error('XHR: onerror fired');
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                    }
+                    reject(new Error('XHR network error'));
+                };
+                
+                xhr.ontimeout = function() {
+                    console.error('XHR: ontimeout fired');
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                    }
+                    reject(new Error('XHR timeout'));
+                };
+                
+                console.log('XHR: Opening connection to:', url);
+                xhr.open('POST', url);
+                xhr.timeout = 60000;
+                console.log('XHR: Sending request...');
+                xhr.send(formData);
+            });
+        }
+
         // Обработка аудио
         async function processAudio(audioBlob) {
+            // Визуальная индикация начала обработки
+            if (status) {
+                status.textContent = 'Начало обработки аудио...';
+                status.className = 'status processing';
+            }
+            
             try {
                 console.log('=== processAudio started ===');
                 console.log('Processing audio. Original size:', audioBlob.size, 'bytes, type:', audioBlob.type);
@@ -905,6 +983,11 @@
                 console.log('Current location:', window.location.href);
                 console.log('Protocol:', window.location.protocol);
                 console.log('Host:', window.location.host);
+                
+                // Проверяем, что audioBlob валиден
+                if (!audioBlob || !audioBlob.size || audioBlob.size === 0) {
+                    throw new Error('Аудио данные пусты или невалидны');
+                }
                 
                 // Проверяем доступность сервера перед отправкой (только для диагностики)
                 const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -937,23 +1020,35 @@
                     throw new Error('Запись слишком короткая. Пожалуйста, говорите дольше (минимум 1 секунда).');
                 }
                 
+                // Проверяем URL перед отправкой
+                if (!API_URL || !API_URL.includes('/api')) {
+                    throw new Error('Ошибка конфигурации: неправильный URL API');
+                }
+                
+                // Проверяем, что blob валиден
+                if (!wavBlob || wavBlob.size < 1024) {
+                    throw new Error('Ошибка: аудио данные не готовы для отправки');
+                }
+                
                 const formData = new FormData();
                 formData.append('audio', wavBlob, 'recording.wav');
                 console.log('Sending audio to server. Size:', wavBlob.size, 'bytes');
                 console.log('FormData created, sending to:', `${API_URL}/voice-assistant`);
+                console.log('FormData entries count:', formData.has('audio') ? 1 : 0);
                 
                 // Устанавливаем статус перед отправкой
-                status.textContent = 'Отправка на сервер...';
+                status.textContent = 'Подготовка к отправке...';
                 status.className = 'status processing';
                 
-                // Проверяем, что FormData создан правильно
-                if (!formData || !wavBlob) {
-                    throw new Error('Ошибка подготовки данных для отправки');
-                }
+                // Небольшая задержка для обновления UI на iOS
+                await new Promise(resolve => setTimeout(resolve, 100));
                 
-                // Проверяем URL перед отправкой
-                if (!API_URL || !API_URL.includes('/api')) {
-                    throw new Error('Ошибка конфигурации: неправильный URL API');
+                // Устанавливаем статус отправки
+                status.textContent = 'Отправка на сервер...';
+                
+                // Проверяем, что FormData создан правильно
+                if (!formData || !formData.has('audio')) {
+                    throw new Error('Ошибка подготовки данных для отправки: FormData не содержит audio');
                 }
                 
                 // Создаем AbortController для таймаута (fallback для старых браузеров)
@@ -990,14 +1085,67 @@
                 
                 let response;
                 try {
-                    console.log('Initiating fetch request to:', `${API_URL}/voice-assistant`);
+                    const requestUrl = `${API_URL}/voice-assistant`;
+                    console.log('Initiating fetch request to:', requestUrl);
+                    console.log('Request will be sent now...');
                     
                     // Показываем пользователю, что запрос отправляется
                     status.textContent = 'Отправка запроса на сервер...';
                     
-                    response = await fetch(`${API_URL}/voice-assistant`, fetchOptions);
+                    // Для iOS добавляем дополнительную проверку
+                    if (isIOSDevice) {
+                        console.log('iOS device: attempting to send request');
+                        // Убеждаемся, что мы на HTTPS
+                        if (window.location.protocol !== 'https:') {
+                            throw new Error('На iOS требуется HTTPS соединение для отправки аудио');
+                        }
+                    }
                     
-                    console.log('Fetch request completed');
+                    // Для iOS используем XMLHttpRequest напрямую, так как fetch может блокироваться
+                    if (isIOSDevice && typeof XMLHttpRequest !== 'undefined') {
+                        console.log('iOS: Using XMLHttpRequest directly for better compatibility');
+                        status.textContent = 'Отправка через альтернативный метод...';
+                        response = await sendViaXHR(requestUrl, formData, timeoutId);
+                        console.log('XHR request completed');
+                    } else {
+                        // Для других браузеров используем fetch
+                        console.log('=== ABOUT TO CALL FETCH ===');
+                        console.log('About to call fetch()...');
+                        console.log('URL:', requestUrl);
+                        console.log('Options:', JSON.stringify({
+                            method: fetchOptions.method,
+                            hasBody: !!fetchOptions.body,
+                            hasSignal: !!fetchOptions.signal
+                        }));
+                        
+                        const fetchStartTime = Date.now();
+                        console.log('Calling fetch() at:', new Date().toISOString());
+                        
+                        // Вызываем fetch
+                        try {
+                            const fetchPromise = fetch(requestUrl, fetchOptions);
+                            console.log('Fetch promise created, waiting for response...');
+                            
+                            response = await fetchPromise;
+                            
+                            const fetchDuration = Date.now() - fetchStartTime;
+                            console.log('Fetch completed in', fetchDuration, 'ms');
+                            console.log('Response status:', response.status);
+                            console.log('=== FETCH COMPLETED ===');
+                        } catch (fetchErr) {
+                            console.error('Fetch failed, error:', fetchErr);
+                            // Пробуем XMLHttpRequest как fallback
+                            if (typeof XMLHttpRequest !== 'undefined') {
+                                console.log('Trying XMLHttpRequest as fallback...');
+                                status.textContent = 'Попытка альтернативного способа отправки...';
+                                response = await sendViaXHR(requestUrl, formData, timeoutId);
+                                console.log('XHR request completed');
+                            } else {
+                                throw fetchErr;
+                            }
+                        }
+                    }
+                    
                     // Очищаем таймаут если запрос успешен
                     if (timeoutId) {
                         clearTimeout(timeoutId);
