@@ -484,20 +484,40 @@
                 }
                 
                 processor.onaudioprocess = (e) => {
+                    // Всегда записываем данные, если isRecording установлен
+                    // Проверяем isRecording в момент обработки
                     if (isRecording) {
-                        const inputData = e.inputBuffer.getChannelData(0);
-                        // Копируем данные в новый буфер
-                        const buffer = new Float32Array(inputData.length);
-                        for (let i = 0; i < inputData.length; i++) {
-                            buffer[i] = inputData[i];
+                        try {
+                            const inputData = e.inputBuffer.getChannelData(0);
+                            // Проверяем, что данные не пустые
+                            if (inputData && inputData.length > 0) {
+                                // Копируем данные в новый буфер
+                                const buffer = new Float32Array(inputData.length);
+                                for (let i = 0; i < inputData.length; i++) {
+                                    buffer[i] = inputData[i];
+                                }
+                                audioBuffer.push(buffer);
+                                // Логируем периодически для отладки
+                                if (audioBuffer.length % 100 === 0) {
+                                    const totalSamples = audioBuffer.reduce((sum, buf) => sum + (buf ? buf.length : 0), 0);
+                                    console.log('Audio buffer chunks:', audioBuffer.length, 'total samples:', totalSamples);
+                                }
+                            } else {
+                                console.warn('Empty input data in onaudioprocess');
+                            }
+                        } catch (err) {
+                            console.error('Error in onaudioprocess:', err);
                         }
-                        audioBuffer.push(buffer);
                     }
                 };
                 
                 source.connect(processor);
-                // Для iOS не подключаем к destination, чтобы избежать feedback
-                // processor.connect(audioContext.destination);
+                // Для iOS нужно подключить к destination, иначе процессор может не работать
+                // Но используем очень тихий выход, чтобы избежать feedback
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = 0; // Отключаем звук на выходе
+                processor.connect(gainNode);
+                gainNode.connect(audioContext.destination);
                 
                 // Сохраняем ссылки для остановки
                 audioWorkletNode = processor;
@@ -527,7 +547,28 @@
             
             if (useWebAudioFallback) {
                 // Конвертируем аудио буфер в WAV для Safari
-                audioBlob = await convertAudioBufferToWAV();
+                console.log('Converting audio buffer to WAV. Buffer chunks:', audioBuffer.length);
+                console.log('Total samples:', audioBuffer.reduce((sum, buf) => sum + (buf ? buf.length : 0), 0));
+                
+                if (!audioBuffer || audioBuffer.length === 0) {
+                    const errorMsg = 'Аудио буфер пуст. Запись не удалась. Попробуйте еще раз.';
+                    console.error(errorMsg);
+                    showError(errorMsg);
+                    status.textContent = 'Готов к работе';
+                    status.className = 'status idle';
+                    recordBtn.disabled = false;
+                    audioBuffer = [];
+                    recordingStartTime = null;
+                    return;
+                }
+                
+                try {
+                    audioBlob = await convertAudioBufferToWAV();
+                    console.log('Audio blob created, size:', audioBlob.size, 'bytes');
+                } catch (convertErr) {
+                    console.error('Error converting audio buffer:', convertErr);
+                    throw new Error('Ошибка конвертации аудио: ' + convertErr.message);
+                }
                 audioBuffer = [];
             } else {
                 console.log('Recording stopped. Total chunks:', audioChunks.length);
@@ -663,17 +704,17 @@
         }
 
         // Toggle запись по клику
-        function toggleRecording() {
+        async function toggleRecording() {
             // Проверяем, инициализирован ли микрофон
             if ((!mediaRecorder && !useWebAudioFallback) || (useWebAudioFallback && !audioContext)) {
                 // Для iOS важно инициализировать в контексте user gesture
                 showError('Инициализация микрофона...');
                 initRecording().then(() => {
                     // После инициализации начинаем запись
-                    setTimeout(() => {
+                    setTimeout(async () => {
                         if (useWebAudioFallback) {
                             if (!isRecording) {
-                                startWebAudioRecording();
+                                await startWebAudioRecording();
                             }
                         } else {
                             if (mediaRecorder && mediaRecorder.state === 'inactive' && !isRecording) {
@@ -693,17 +734,17 @@
                 if (!isRecording) {
                     // Убеждаемся, что audioContext активен (iOS требует user gesture)
                     if (audioContext && audioContext.state === 'suspended') {
-                        audioContext.resume().then(() => {
-                            startWebAudioRecording();
+                        audioContext.resume().then(async () => {
+                            await startWebAudioRecording();
                         }).catch(err => {
                             console.error('Failed to resume audio context:', err);
                             showError('Не удалось активировать микрофон. Попробуйте еще раз.');
                         });
                     } else {
-                        startWebAudioRecording();
+                        await startWebAudioRecording();
                     }
                 } else {
-                    stopWebAudioRecording();
+                    await stopWebAudioRecording();
                 }
             } else {
                 // Для других браузеров используем MediaRecorder
@@ -754,7 +795,7 @@
         }
 
         // Начало записи через Web Audio API (Safari/iOS)
-        function startWebAudioRecording() {
+        async function startWebAudioRecording() {
             if (!audioContext || !audioWorkletNode) {
                 showError('Аудио система не инициализирована. Обновите страницу.');
                 return;
@@ -762,24 +803,40 @@
             
             // Убеждаемся, что audioContext активен
             if (audioContext.state === 'suspended') {
-                audioContext.resume().catch(err => {
+                try {
+                    await audioContext.resume();
+                    console.log('AudioContext resumed, state:', audioContext.state);
+                } catch (err) {
                     console.error('Failed to resume audio context:', err);
-                    showError('Не удалось активировать микрофон.');
+                    showError('Не удалось активировать микрофон. Попробуйте еще раз.');
                     return;
-                });
+                }
             }
             
+            // Очищаем буфер перед началом записи
             audioBuffer = [];
+            console.log('Starting recording. AudioContext state:', audioContext.state);
+            console.log('AudioContext sample rate:', audioContext.sampleRate);
+            
+            // Устанавливаем флаг записи ДО начала записи
+            isRecording = true;
+            console.log('isRecording set to:', isRecording);
+            
             recordBtn.classList.add('recording');
             status.className = 'status recording';
             errorDiv.classList.remove('show');
-            isRecording = true;
+            
             console.log('Recording started (Web Audio API). Sample rate:', audioContext.sampleRate);
             
             recordingStartTime = Date.now();
             recordingTimer = setInterval(() => {
                 const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
                 status.textContent = `Запись... ${elapsed} сек`;
+                // Периодически проверяем, что буфер заполняется
+                if (elapsed > 0 && elapsed % 2 === 0) {
+                    const totalSamples = audioBuffer.reduce((sum, buf) => sum + (buf && buf.length ? buf.length : 0), 0);
+                    console.log('Recording check: buffer chunks:', audioBuffer.length, 'samples:', totalSamples);
+                }
             }, 100);
         }
 
@@ -795,7 +852,27 @@
             const recordingDuration = recordingStartTime ? Math.floor((Date.now() - recordingStartTime) / 1000) : 0;
             console.log('Recording duration:', recordingDuration, 'seconds');
             
+            // Проверяем буфер перед остановкой
+            console.log('Audio buffer chunks before stop:', audioBuffer.length);
+            const totalSamplesBefore = audioBuffer.reduce((sum, buf) => sum + (buf && buf.length ? buf.length : 0), 0);
+            console.log('Total samples in buffer before stop:', totalSamplesBefore);
+            
+            // Небольшая задержка, чтобы последние данные попали в буфер
+            // Важно: НЕ останавливаем isRecording сразу, даем время для последних данных
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // Теперь останавливаем запись
             isRecording = false;
+            console.log('isRecording set to false');
+            
+            // Еще одна небольшая задержка для обработки последних данных процессором
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Проверяем буфер после остановки
+            console.log('Audio buffer chunks after stop:', audioBuffer.length);
+            const totalSamplesAfter = audioBuffer.reduce((sum, buf) => sum + (buf && buf.length ? buf.length : 0), 0);
+            console.log('Total samples in buffer after stop:', totalSamplesAfter);
+            
             recordBtn.classList.remove('recording');
             status.textContent = 'Обработка...';
             status.className = 'status processing';
