@@ -899,8 +899,30 @@
         // Обработка аудио
         async function processAudio(audioBlob) {
             try {
+                console.log('=== processAudio started ===');
                 console.log('Processing audio. Original size:', audioBlob.size, 'bytes, type:', audioBlob.type);
                 console.log('API_URL:', API_URL);
+                console.log('Current location:', window.location.href);
+                console.log('Protocol:', window.location.protocol);
+                console.log('Host:', window.location.host);
+                
+                // Проверяем доступность сервера перед отправкой (только для диагностики)
+                const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                if (isIOSDevice) {
+                    console.log('iOS device detected');
+                    console.log('Using HTTPS:', window.location.protocol === 'https:');
+                    
+                    // Пробуем проверить доступность API
+                    try {
+                        const healthCheck = await fetch(`${API_URL.replace('/api', '')}/api/health`, {
+                            method: 'GET',
+                            credentials: 'omit'
+                        });
+                        console.log('Health check response:', healthCheck.status, healthCheck.statusText);
+                    } catch (healthErr) {
+                        console.warn('Health check failed (this is OK, continuing anyway):', healthErr.message);
+                    }
+                }
                 
                 // Конвертируем в WAV если нужно
                 let wavBlob = audioBlob;
@@ -919,15 +941,68 @@
                 formData.append('audio', wavBlob, 'recording.wav');
                 console.log('Sending audio to server. Size:', wavBlob.size, 'bytes');
                 console.log('FormData created, sending to:', `${API_URL}/voice-assistant`);
-
-                const response = await fetch(`${API_URL}/voice-assistant`, {
+                
+                // Устанавливаем статус перед отправкой
+                status.textContent = 'Отправка на сервер...';
+                status.className = 'status processing';
+                
+                // Создаем AbortController для таймаута (fallback для старых браузеров)
+                let abortController = null;
+                let timeoutId = null;
+                if (typeof AbortController !== 'undefined') {
+                    abortController = new AbortController();
+                    // Устанавливаем таймаут 60 секунд
+                    timeoutId = setTimeout(() => {
+                        if (abortController) {
+                            abortController.abort();
+                        }
+                    }, 60000);
+                }
+                
+                const fetchOptions = {
                     method: 'POST',
                     body: formData,
                     // Не устанавливаем Content-Type, браузер сам установит с boundary для FormData
-                }).catch(err => {
-                    console.error('Fetch error:', err);
-                    throw new Error(`Ошибка сети: ${err.message}. Проверьте подключение к серверу.`);
+                    // Добавляем credentials для работы с HTTPS
+                    credentials: 'omit',
+                    // Добавляем signal для возможности отмены
+                    signal: abortController ? abortController.signal : undefined
+                };
+                
+                console.log('Fetch options:', {
+                    method: fetchOptions.method,
+                    hasBody: !!fetchOptions.body,
+                    credentials: fetchOptions.credentials
                 });
+                
+                let response;
+                try {
+                    console.log('Initiating fetch request...');
+                    response = await fetch(`${API_URL}/voice-assistant`, fetchOptions);
+                    console.log('Fetch request completed');
+                    // Очищаем таймаут если запрос успешен
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                    }
+                } catch (err) {
+                    // Очищаем таймаут при ошибке
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                    }
+                    console.error('Fetch error caught:', err);
+                    console.error('Error name:', err.name);
+                    console.error('Error message:', err.message);
+                    console.error('Error stack:', err.stack);
+                    
+                    // Более детальная обработка ошибок для iOS
+                    if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
+                        throw new Error(`Не удалось подключиться к серверу. Проверьте:\n1. Сервер запущен на ${API_URL}\n2. Соединение по HTTPS работает\n3. Сертификат принят в браузере`);
+                    } else if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+                        throw new Error('Превышено время ожидания ответа от сервера. Попробуйте еще раз.');
+                    } else {
+                        throw new Error(`Ошибка сети: ${err.message || err.name}. Проверьте подключение к серверу ${API_URL}`);
+                    }
+                }
 
                 console.log('Response received. Status:', response.status, response.statusText);
                 console.log('Response headers:', [...response.headers.entries()]);

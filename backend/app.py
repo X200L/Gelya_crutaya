@@ -24,12 +24,13 @@ else:
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
 # Настройка CORS для работы с HTTPS и FormData
 CORS(app, resources={
-    r"/*": {
+    r"/api/*": {
         "origins": "*",
         "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
-        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
         "expose_headers": ["Content-Type"],
-        "supports_credentials": False
+        "supports_credentials": False,
+        "max_age": 3600
     }
 })
 
