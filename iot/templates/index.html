@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мониторинг ПК</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f7;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f0f0f0;
+            font-weight: 600;
+        }
+        tr:hover {
+            background: #fafafa;
+        }
+        .info {
+            font-size: 0.9em;
+            color: #666;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #f9f9f9;
+            padding: 8px;
+            border-radius: 4px;
+            max-height: 150px;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 Отчёты о состоянии ПК</h1>
+    {% if reports %}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Хост</th>
+                    <th>ОС</th>
+                    <th>CPU</th>
+                    <th>RAM</th>
+                    <th>Батарея</th>
+                    <th>Время</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in reports | reverse %}
+                <tr onclick="toggleDetails(this)" style="cursor: pointer;">
+                    <td>{{ r.id }}</td>
+                    <td><strong>{{ r.hostname }}</strong></td>
+                    <td>{{ r.os }} ({{ r.machine }})</td>
+                    <td>{{ r.cpu_percent }}% ({{ r.cpu_cores_logical }} ядер)</td>
+                    <td>{{ r.ram_used_gb }} / {{ r.ram_total_gb }} GB ({{ r.ram_percent }}%)</td>
+                    <td>
+                        {% if r.battery %}
+                            🔋 {{ "%.1f"|format(r.battery.percent) }}%
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>{{ r.report_time | replace('T', ' ') | replace('Z', '') }}</td>
+                </tr>
+                <tr class="details" style="display:none;">
+                    <td colspan="7">
+                        <pre>{{ r | tojson(indent=2) }}</pre>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="text-align: center; color: #888;">Нет отчётов</p>
+    {% endif %}
+
+    <script>
+        function toggleDetails(row) {
+            const nextRow = row.nextElementSibling;
+            if (nextRow && nextRow.classList.contains('details')) {
+                nextRow.style.display = nextRow.style.display === 'none' ? 'table-row' : 'none';
+            }
+        }
+    </script>
+</body>
+</html>
