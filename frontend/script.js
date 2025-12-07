@@ -900,6 +900,7 @@
         async function processAudio(audioBlob) {
             try {
                 console.log('Processing audio. Original size:', audioBlob.size, 'bytes, type:', audioBlob.type);
+                console.log('API_URL:', API_URL);
                 
                 // Конвертируем в WAV если нужно
                 let wavBlob = audioBlob;
@@ -917,18 +918,33 @@
                 const formData = new FormData();
                 formData.append('audio', wavBlob, 'recording.wav');
                 console.log('Sending audio to server. Size:', wavBlob.size, 'bytes');
+                console.log('FormData created, sending to:', `${API_URL}/voice-assistant`);
 
                 const response = await fetch(`${API_URL}/voice-assistant`, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    // Не устанавливаем Content-Type, браузер сам установит с boundary для FormData
+                }).catch(err => {
+                    console.error('Fetch error:', err);
+                    throw new Error(`Ошибка сети: ${err.message}. Проверьте подключение к серверу.`);
                 });
+
+                console.log('Response received. Status:', response.status, response.statusText);
+                console.log('Response headers:', [...response.headers.entries()]);
 
                 if (!response.ok) {
                     let errorMessage = 'Ошибка обработки запроса';
+                    let errorDetails = null;
                     try {
-                        const error = await response.json();
-                        errorMessage = error.error || error.details || errorMessage;
-                        console.error('Server error:', error);
+                        const errorText = await response.text();
+                        console.error('Error response text:', errorText);
+                        try {
+                            errorDetails = JSON.parse(errorText);
+                            errorMessage = errorDetails.error || errorDetails.details || errorMessage;
+                            console.error('Server error (parsed):', errorDetails);
+                        } catch (e) {
+                            errorMessage = errorText || `HTTP ${response.status}: ${response.statusText}`;
+                        }
                     } catch (e) {
                         errorMessage = `HTTP ${response.status}: ${response.statusText}`;
                         console.error('Failed to parse error response:', e);
@@ -937,6 +953,7 @@
                 }
 
                 const result = await response.json();
+                console.log('Response received successfully. Audio length:', result.audio ? result.audio.length : 0);
 
                 // Конвертируем base64 обратно в blob и автоматически воспроизводим
                 if (result.audio) {
@@ -956,10 +973,23 @@
                     recordBtn.disabled = false;
                 }
             } catch (err) {
+                console.error('Error in processAudio:', err);
+                console.error('Error stack:', err.stack);
                 isRecording = false;
-                showError(err.message);
-                status.textContent = 'Готов к работе';
-                status.className = 'status idle';
+                let errorMessage = err.message || 'Неизвестная ошибка';
+                
+                // Более детальные сообщения об ошибках
+                if (err.message && (err.message.includes('network') || err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
+                    errorMessage = 'Ошибка подключения к серверу. Проверьте, что сервер запущен и доступен по адресу ' + API_URL;
+                } else if (err.message && err.message.includes('CORS')) {
+                    errorMessage = 'Ошибка CORS. Сервер не разрешает запросы с этого домена.';
+                } else if (err.message && err.message.includes('timeout')) {
+                    errorMessage = 'Превышено время ожидания ответа от сервера.';
+                }
+                
+                showError(errorMessage);
+                status.textContent = 'Ошибка';
+                status.className = 'status error';
                 recordBtn.disabled = false;
                 recordBtn.classList.remove('recording');
             }

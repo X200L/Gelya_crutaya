@@ -22,12 +22,14 @@ else:
     print("Loaded .env from current directory or default location")
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
-# Настройка CORS для работы с HTTPS
+# Настройка CORS для работы с HTTPS и FormData
 CORS(app, resources={
     r"/*": {
         "origins": "*",
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
+        "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+        "expose_headers": ["Content-Type"],
+        "supports_credentials": False
     }
 })
 
@@ -345,10 +347,22 @@ def synthesize():
 @app.route('/api/voice-assistant', methods=['POST'])
 def voice_assistant():
     """Полный цикл: распознавание -> ИИ -> синтез"""
-    if 'audio' not in request.files:
-        return jsonify({'error': 'No audio file provided'}), 400
-    
-    audio_file = request.files['audio']
+    try:
+        print(f"\n{'='*60}")
+        print(f"Voice assistant request received")
+        print(f"Method: {request.method}")
+        print(f"Content-Type: {request.content_type}")
+        print(f"Headers: {dict(request.headers)}")
+        print(f"Files in request: {list(request.files.keys())}")
+        print(f"Form data: {list(request.form.keys())}")
+        
+        if 'audio' not in request.files:
+            print("ERROR: No audio file in request.files")
+            return jsonify({'error': 'No audio file provided'}), 400
+        
+        audio_file = request.files['audio']
+        print(f"Audio file received: {audio_file.filename}, size: {audio_file.content_length if hasattr(audio_file, 'content_length') else 'unknown'} bytes")
+        print(f"{'='*60}\n")
     
     try:
         # Шаг 1: Распознавание речи
@@ -564,9 +578,12 @@ def voice_assistant():
         return jsonify({'error': error_msg, 'details': str(e)}), 500
     except Exception as e:
         error_msg = str(e)
-        print(f"Error in voice assistant: {error_msg}")
+        print(f"\n{'='*60}")
+        print(f"ERROR in voice assistant: {error_msg}")
+        print(f"Error type: {type(e).__name__}")
         import traceback
         traceback.print_exc()
+        print(f"{'='*60}\n")
         return jsonify({'error': error_msg, 'type': type(e).__name__}), 500
 
 
