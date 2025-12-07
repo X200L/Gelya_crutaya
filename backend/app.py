@@ -363,8 +363,6 @@ def voice_assistant():
         audio_file = request.files['audio']
         print(f"Audio file received: {audio_file.filename}, size: {audio_file.content_length if hasattr(audio_file, 'content_length') else 'unknown'} bytes")
         print(f"{'='*60}\n")
-    
-    try:
         # Шаг 1: Распознавание речи
         token_stt = get_salute_speech_token()
         if not token_stt:
