@@ -268,7 +268,7 @@
                 }
                 console.error('No getUserMedia support found');
                 throw new Error('Ваш браузер не поддерживает запись аудио. Пожалуйста, используйте современный браузер (Chrome, Firefox, Safari).');
-            }
+                    }
             
             console.log('Using legacy getUserMedia');
             // Обертка для legacy API
@@ -629,51 +629,65 @@
             
             // Получаем sample rate из audioContext (может быть 44100 или 48000 на iOS)
             const sourceSampleRate = audioContext ? audioContext.sampleRate : 44100;
-            const targetSampleRate = 16000; // Целевая частота для API
+            // Отправляем оригинальную частоту - STT API поддерживает разные частоты и сам ресемплирует
+            // Это дает лучшее качество, чем ресемплинг на фронтенде
+            const sampleRate = sourceSampleRate;
             
-            // Ресемплируем если нужно (линейная интерполяция для лучшего качества)
-            let resampledBuffer = mergedBuffer;
-            if (sourceSampleRate !== targetSampleRate) {
-                const ratio = sourceSampleRate / targetSampleRate;
-                const newLength = Math.floor(mergedBuffer.length / ratio);
-                resampledBuffer = new Float32Array(newLength);
-                
-                for (let i = 0; i < newLength; i++) {
-                    const srcIndex = i * ratio;
-                    const srcIndexFloor = Math.floor(srcIndex);
-                    const srcIndexCeil = Math.min(srcIndexFloor + 1, mergedBuffer.length - 1);
-                    const fraction = srcIndex - srcIndexFloor;
-                    
-                    // Линейная интерполяция
-                    resampledBuffer[i] = mergedBuffer[srcIndexFloor] * (1 - fraction) + 
-                                        mergedBuffer[srcIndexCeil] * fraction;
-                }
-            }
+            // НЕ ресемплируем на фронтенде - пусть STT API сам обработает
+            // Это дает лучшее качество распознавания
+            const audioBufferForWAV = mergedBuffer;
             
             // Нормализуем аудио (увеличиваем громкость если нужно)
             let maxAmplitude = 0;
-            for (let i = 0; i < resampledBuffer.length; i++) {
-                maxAmplitude = Math.max(maxAmplitude, Math.abs(resampledBuffer[i]));
+            let sumSquares = 0;
+            for (let i = 0; i < audioBufferForWAV.length; i++) {
+                const absValue = Math.abs(audioBufferForWAV[i]);
+                maxAmplitude = Math.max(maxAmplitude, absValue);
+                sumSquares += audioBufferForWAV[i] * audioBufferForWAV[i];
             }
             
-            // Если максимальная амплитуда меньше 0.1, увеличиваем громкость
-            if (maxAmplitude > 0 && maxAmplitude < 0.1) {
-                const gain = 0.5 / maxAmplitude; // Увеличиваем до 50% от максимума
-                for (let i = 0; i < resampledBuffer.length; i++) {
-                    resampledBuffer[i] = Math.max(-1, Math.min(1, resampledBuffer[i] * gain));
+            // Вычисляем RMS (среднеквадратичное значение) для оценки уровня сигнала
+            const rms = Math.sqrt(sumSquares / audioBufferForWAV.length);
+            
+            console.log(`Audio analysis: max=${maxAmplitude.toFixed(4)}, RMS=${rms.toFixed(4)}`);
+            
+            // Проверяем, есть ли реальный звук
+            if (maxAmplitude < 0.001 || rms < 0.001) {
+                throw new Error('Запись слишком тихая или пустая. Проверьте микрофон и попробуйте говорить громче.');
+            }
+            
+            // Применяем нормализацию для улучшения качества распознавания
+            // Целевой уровень: максимум около 0.7-0.8 (оставляем запас)
+            let targetMax = 0.75;
+            let gain = 1.0;
+            
+            if (maxAmplitude > 0 && maxAmplitude < targetMax) {
+                // Увеличиваем громкость до целевого уровня
+                gain = targetMax / maxAmplitude;
+                // Ограничиваем максимальное усиление до 15x (для очень тихих записей)
+                gain = Math.min(gain, 15.0);
+                
+                for (let i = 0; i < audioBufferForWAV.length; i++) {
+                    audioBufferForWAV[i] = Math.max(-1, Math.min(1, audioBufferForWAV[i] * gain));
                 }
-                console.log(`Audio normalized: max amplitude was ${maxAmplitude.toFixed(4)}, applied gain ${gain.toFixed(2)}`);
-            } else if (maxAmplitude > 0) {
-                console.log(`Audio levels OK: max amplitude ${maxAmplitude.toFixed(4)}`);
+                console.log(`Audio normalized: max was ${maxAmplitude.toFixed(4)}, applied gain ${gain.toFixed(2)}, new max=${Math.min(maxAmplitude * gain, 1).toFixed(4)}`);
+            } else if (maxAmplitude > 0.95) {
+                // Если слишком громко, немного уменьшаем
+                gain = 0.9 / maxAmplitude;
+                for (let i = 0; i < audioBufferForWAV.length; i++) {
+                    audioBufferForWAV[i] = Math.max(-1, Math.min(1, audioBufferForWAV[i] * gain));
+                }
+                console.log(`Audio reduced: max was ${maxAmplitude.toFixed(4)}, applied gain ${gain.toFixed(2)}`);
+            } else {
+                console.log(`Audio levels OK: max=${maxAmplitude.toFixed(4)}, RMS=${rms.toFixed(4)}`);
             }
             
             // Конвертируем в 16-bit PCM
-            const sampleRate = targetSampleRate;
             const numChannels = 1;
             const bytesPerSample = 2;
             const blockAlign = numChannels * bytesPerSample;
             const byteRate = sampleRate * blockAlign;
-            const dataSize = resampledBuffer.length * blockAlign;
+            const dataSize = audioBufferForWAV.length * blockAlign;
             const bufferSize = 44 + dataSize;
             const arrayBuffer = new ArrayBuffer(bufferSize);
             const view = new DataView(arrayBuffer);
@@ -701,13 +715,15 @@
             
             // Данные - конвертируем Float32 в Int16
             let offset = 44;
-            for (let i = 0; i < resampledBuffer.length; i++) {
-                const sample = Math.max(-1, Math.min(1, resampledBuffer[i]));
+            for (let i = 0; i < audioBufferForWAV.length; i++) {
+                const sample = Math.max(-1, Math.min(1, audioBufferForWAV[i]));
                 // Конвертируем в 16-bit integer
                 const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
                 view.setInt16(offset, intSample, true);
                 offset += 2;
             }
+            
+            console.log(`WAV created: sample_rate=${sampleRate}Hz, samples=${audioBufferForWAV.length}, size=${bufferSize} bytes`);
             
             return new Blob([arrayBuffer], { type: 'audio/wav' });
         }
