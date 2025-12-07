@@ -231,14 +231,14 @@
             }
             
             // Проверяем реальную поддержку для других браузеров
-            try {
-                const testRecorder = new MediaRecorder(new MediaStream());
-                return testRecorder && typeof testRecorder.start === 'function';
-            } catch (e) {
-                return false;
+                try {
+                    const testRecorder = new MediaRecorder(new MediaStream());
+                    return testRecorder && typeof testRecorder.start === 'function';
+                } catch (e) {
+                    return false;
+                }
             }
-        }
-
+            
         // Получение getUserMedia с поддержкой старых браузеров и iOS
         function getUserMedia(constraints) {
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -256,10 +256,10 @@
             
             // Fallback для старых браузеров (но не для iOS, там это не работает)
             const getUserMediaLegacy = navigator.getUserMedia ||
-                navigator.webkitGetUserMedia ||
-                navigator.mozGetUserMedia ||
-                navigator.msGetUserMedia;
-            
+                        navigator.webkitGetUserMedia ||
+                        navigator.mozGetUserMedia ||
+                        navigator.msGetUserMedia;
+                    
             if (!getUserMediaLegacy) {
                 // Для iOS Safari, если mediaDevices нет, это означает очень старую версию
                 if (isIOS) {
@@ -356,7 +356,7 @@
                         // На iOS NotSupportedError обычно означает проблему с разрешениями или настройками
                         if (isLocalhost) {
                             errorMessage = 'Ошибка доступа к микрофону на iOS. Убедитесь, что: 1) Вы используете Safari (не Chrome), 2) Вы дали разрешение на микрофон (иконка в адресной строке), 3) Микрофон не занят другим приложением.';
-                        } else {
+                } else {
                             errorMessage = 'Ошибка доступа к микрофону на iOS. Убедитесь, что: 1) Вы используете Safari (не Chrome), 2) Сайт открыт по HTTPS, 3) Вы дали разрешение на микрофон (иконка в адресной строке), 4) Микрофон не занят другим приложением.';
                         }
                     } else {
@@ -488,15 +488,15 @@
                     // Проверяем isRecording в момент обработки
                     if (isRecording) {
                         try {
-                            const inputData = e.inputBuffer.getChannelData(0);
+                        const inputData = e.inputBuffer.getChannelData(0);
                             // Проверяем, что данные не пустые
                             if (inputData && inputData.length > 0) {
                                 // Копируем данные в новый буфер
-                                const buffer = new Float32Array(inputData.length);
-                                for (let i = 0; i < inputData.length; i++) {
-                                    buffer[i] = inputData[i];
-                                }
-                                audioBuffer.push(buffer);
+                        const buffer = new Float32Array(inputData.length);
+                        for (let i = 0; i < inputData.length; i++) {
+                            buffer[i] = inputData[i];
+                        }
+                        audioBuffer.push(buffer);
                                 // Логируем периодически для отладки
                                 if (audioBuffer.length % 100 === 0) {
                                     const totalSamples = audioBuffer.reduce((sum, buf) => sum + (buf ? buf.length : 0), 0);
@@ -563,7 +563,7 @@
                 }
                 
                 try {
-                    audioBlob = await convertAudioBufferToWAV();
+                audioBlob = await convertAudioBufferToWAV();
                     console.log('Audio blob created, size:', audioBlob.size, 'bytes');
                 } catch (convertErr) {
                     console.error('Error converting audio buffer:', convertErr);
@@ -631,7 +631,7 @@
             const sourceSampleRate = audioContext ? audioContext.sampleRate : 44100;
             const targetSampleRate = 16000; // Целевая частота для API
             
-            // Ресемплируем если нужно (простое понижающее сэмплирование)
+            // Ресемплируем если нужно (линейная интерполяция для лучшего качества)
             let resampledBuffer = mergedBuffer;
             if (sourceSampleRate !== targetSampleRate) {
                 const ratio = sourceSampleRate / targetSampleRate;
@@ -639,9 +639,32 @@
                 resampledBuffer = new Float32Array(newLength);
                 
                 for (let i = 0; i < newLength; i++) {
-                    const srcIndex = Math.floor(i * ratio);
-                    resampledBuffer[i] = mergedBuffer[srcIndex];
+                    const srcIndex = i * ratio;
+                    const srcIndexFloor = Math.floor(srcIndex);
+                    const srcIndexCeil = Math.min(srcIndexFloor + 1, mergedBuffer.length - 1);
+                    const fraction = srcIndex - srcIndexFloor;
+                    
+                    // Линейная интерполяция
+                    resampledBuffer[i] = mergedBuffer[srcIndexFloor] * (1 - fraction) + 
+                                        mergedBuffer[srcIndexCeil] * fraction;
                 }
+            }
+            
+            // Нормализуем аудио (увеличиваем громкость если нужно)
+            let maxAmplitude = 0;
+            for (let i = 0; i < resampledBuffer.length; i++) {
+                maxAmplitude = Math.max(maxAmplitude, Math.abs(resampledBuffer[i]));
+            }
+            
+            // Если максимальная амплитуда меньше 0.1, увеличиваем громкость
+            if (maxAmplitude > 0 && maxAmplitude < 0.1) {
+                const gain = 0.5 / maxAmplitude; // Увеличиваем до 50% от максимума
+                for (let i = 0; i < resampledBuffer.length; i++) {
+                    resampledBuffer[i] = Math.max(-1, Math.min(1, resampledBuffer[i] * gain));
+                }
+                console.log(`Audio normalized: max amplitude was ${maxAmplitude.toFixed(4)}, applied gain ${gain.toFixed(2)}`);
+            } else if (maxAmplitude > 0) {
+                console.log(`Audio levels OK: max amplitude ${maxAmplitude.toFixed(4)}`);
             }
             
             // Конвертируем в 16-bit PCM
@@ -740,7 +763,7 @@
                             console.error('Failed to resume audio context:', err);
                             showError('Не удалось активировать микрофон. Попробуйте еще раз.');
                         });
-                    } else {
+                } else {
                         await startWebAudioRecording();
                     }
                 } else {
@@ -1472,7 +1495,7 @@
             
             setTimeout(() => {
                 if (errorDiv) {
-                    errorDiv.classList.remove('show');
+                errorDiv.classList.remove('show');
                 }
             }, timeout);
             

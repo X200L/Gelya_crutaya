@@ -7,6 +7,8 @@ import uuid
 import json
 import base64
 import urllib3
+import struct
+import io
 
 # Отключаем предупреждения о небезопасных SSL запросах (для API Sberbank)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -83,47 +85,6 @@ def get_gigachat_token(force_refresh=False):
         return None
 
 
-def extract_pcm_from_wav(wav_data):
-    """Извлекает PCM данные из WAV файла"""
-    try:
-        # Проверяем, что это WAV файл
-        if len(wav_data) < 12:
-            return None
-        
-        # Проверяем заголовок RIFF
-        if wav_data[0:4] != b'RIFF':
-            # Если это не WAV, возвращаем данные как есть (может быть уже PCM)
-            return wav_data
-        
-        if wav_data[8:12] != b'WAVE':
-            return None
-        
-        # Ищем чанк "data"
-        offset = 12
-        while offset < len(wav_data) - 8:
-            chunk_id = wav_data[offset:offset+4]
-            chunk_size = int.from_bytes(wav_data[offset+4:offset+8], byteorder='little')
-            
-            if chunk_id == b'data':
-                # Нашли чанк данных, извлекаем PCM
-                pcm_data = wav_data[offset+8:offset+8+chunk_size]
-                print(f"Extracted PCM data: {len(pcm_data)} bytes from WAV file")
-                return pcm_data
-            
-            # Переходим к следующему чанку
-            offset += 8 + chunk_size
-        
-        # Если не нашли чанк data, пробуем стандартный заголовок (44 байта)
-        if len(wav_data) > 44:
-            print("WAV data chunk not found, using standard 44-byte header offset")
-            return wav_data[44:]
-        
-        return None
-    except Exception as e:
-        print(f"Error extracting PCM from WAV: {e}")
-        return None
-
-
 def get_salute_speech_token(force_refresh=False):
     """Получить токен доступа для Salute Speech"""
     global salute_speech_token
@@ -187,6 +148,66 @@ def get_salute_speech_token(force_refresh=False):
         return None
 
 
+def extract_pcm_from_wav(wav_data):
+    """
+    Извлекает PCM данные из WAV файла.
+    Возвращает (pcm_data, sample_rate, channels) или None если ошибка.
+    """
+    try:
+        # Проверяем, что это WAV файл (начинается с "RIFF")
+        if len(wav_data) < 44 or wav_data[:4] != b'RIFF':
+            return None, None, None
+        
+        # Парсим WAV заголовок
+        # RIFF chunk (0-3: "RIFF", 4-7: chunk size, 8-11: "WAVE")
+        # fmt chunk (12-15: "fmt ", 16-19: fmt chunk size, 20-21: audio format, 22-23: num channels, 24-27: sample rate)
+        fmt_chunk_size = struct.unpack('<I', wav_data[16:20])[0]
+        audio_format = struct.unpack('<H', wav_data[20:22])[0]
+        num_channels = struct.unpack('<H', wav_data[22:24])[0]
+        sample_rate = struct.unpack('<I', wav_data[24:28])[0]
+        byte_rate = struct.unpack('<I', wav_data[28:32])[0]
+        block_align = struct.unpack('<H', wav_data[32:34])[0]
+        bits_per_sample = struct.unpack('<H', wav_data[34:36])[0]
+        
+        print(f"WAV header: format={audio_format}, channels={num_channels}, sample_rate={sample_rate}, bits_per_sample={bits_per_sample}")
+        
+        # Ищем data chunk
+        data_start = 36 + fmt_chunk_size - 16  # Пропускаем fmt chunk
+        if data_start + 8 > len(wav_data):
+            print("ERROR: WAV file too short or malformed")
+            return None, None, None
+        
+        # Ищем "data" chunk (может быть не сразу после fmt)
+        data_offset = None
+        for i in range(data_start, min(len(wav_data) - 8, data_start + 100)):
+            if wav_data[i:i+4] == b'data':
+                data_offset = i
+                break
+        
+        if data_offset is None:
+            print("ERROR: Could not find 'data' chunk in WAV file")
+            return None, None, None
+        
+        # Читаем размер data chunk
+        data_size = struct.unpack('<I', wav_data[data_offset+4:data_offset+8])[0]
+        pcm_start = data_offset + 8
+        
+        if pcm_start + data_size > len(wav_data):
+            print(f"WARNING: Data chunk size ({data_size}) exceeds file size, using available data")
+            data_size = len(wav_data) - pcm_start
+        
+        # Извлекаем PCM данные
+        pcm_data = wav_data[pcm_start:pcm_start + data_size]
+        
+        print(f"Extracted PCM data: {len(pcm_data)} bytes from WAV file")
+        return pcm_data, sample_rate, num_channels
+    except Exception as e:
+        print(f"Error extracting PCM from WAV: {e}")
+        import traceback
+        traceback.print_exc()
+        return None, None, None
+
+
 @app.route('/')
 def index():
     """Главная страница - отдаем фронтенд"""
@@ -222,13 +243,6 @@ def transcribe():
     
     try:
         audio_data = audio_file.read()
-        
-        # Извлекаем PCM данные из WAV файла, если это WAV
-        pcm_data = extract_pcm_from_wav(audio_data)
-        if pcm_data is None:
-            # Если не удалось извлечь PCM, используем исходные данные
-            pcm_data = audio_data
-        
         # Параметры для распознавания
         params = {
             'format': 'pcm16',
@@ -239,7 +253,7 @@ def transcribe():
         response = requests.post(
             url,
             headers=headers,
-            data=pcm_data,
+            data=audio_data,
             params=params,
             verify=False,
             timeout=30
@@ -423,34 +437,45 @@ def voice_assistant():
         print(f"Audio data size: {len(audio_data)} bytes")  # Для отладки
         print(f"Audio filename: {audio_file.filename}, Content-Type: {audio_file.content_type}")  # Для отладки
         
-        # Извлекаем PCM данные из WAV файла, если это WAV
-        pcm_data = extract_pcm_from_wav(audio_data)
-        if pcm_data is None:
-            # Если не удалось извлечь PCM, используем исходные данные
-            print("Warning: Could not extract PCM from WAV, using raw data")
-            pcm_data = audio_data
-        else:
-            print(f"PCM data extracted: {len(pcm_data)} bytes")
+        # Проверяем, является ли это WAV файлом, и извлекаем PCM данные
+        pcm_data = None
+        sample_rate = 16000
+        num_channels = 1
+        
+        if len(audio_data) >= 4 and audio_data[:4] == b'RIFF':
+            print("Detected WAV file, extracting PCM data...")
+            pcm_data, wav_sample_rate, wav_channels = extract_pcm_from_wav(audio_data)
+            if pcm_data:
+                audio_data = pcm_data
+                if wav_sample_rate:
+                    sample_rate = wav_sample_rate
+                if wav_channels:
+                    num_channels = wav_channels
+                print(f"PCM data extracted: {len(audio_data)} bytes, sample_rate={sample_rate}, channels={num_channels}")
+            else:
+                print("WARNING: Failed to extract PCM from WAV, sending original data")
         
         # API Salute Speech требует специфический Content-Type для PCM
         # Формат: audio/x-pcm;bit=16;rate=16000
         headers_stt = {
             'Authorization': f'Bearer {token_stt}',
-            'Content-Type': 'audio/x-pcm;bit=16;rate=16000'
+            'Content-Type': f'audio/x-pcm;bit=16;rate={sample_rate}'
         }
         
         # Параметры для распознавания PCM
         params_stt = {
             'format': 'pcm16',
-            'rate': 16000,
-            'channels': 1
+            'rate': sample_rate,
+            'channels': num_channels
         }
         
-        # Отправляем PCM данные в API Salute Speech
+        print(f"Sending to STT: {len(audio_data)} bytes, format=pcm16, rate={sample_rate}, channels={num_channels}")
+        
+        # Отправляем PCM данные на распознавание
         response_stt = requests.post(
             url_stt,
             headers=headers_stt,
-            data=pcm_data,
+            data=audio_data,
             params=params_stt,
             verify=False,
             timeout=30
@@ -468,7 +493,7 @@ def voice_assistant():
                 response_stt = requests.post(
                     url_stt,
                     headers=headers_stt,
-                    data=pcm_data,
+                    data=audio_data,
                     params=params_stt,
                     verify=False,
                     timeout=30
