@@ -643,16 +643,6 @@ body {
     font-style: italic;
 }
 
-/* Стили для ответа голосового помощника */
-.voice-response-container {
-    margin-top: 30px;
-    padding: 20px;
-    background: var(--bg-secondary);
-    border-radius: 15px;
-    border: 1px solid var(--border-color);
-    animation: fadeIn 0.5s;
-}
-
 /* Стили для текстового чата */
 .text-chat-container {
     margin-top: 30px;

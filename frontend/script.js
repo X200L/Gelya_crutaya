@@ -134,11 +134,7 @@
                 
                 // Инициализируем микрофон при открытии экрана голосового помощника
                 if (screenName === 'voice' && !mediaRecorder && !audioContext) {
-                    // Для iOS важно инициализировать в контексте user gesture
-                    initRecording().catch(err => {
-                        console.error('Failed to initialize recording on screen open:', err);
-                        // Не показываем ошибку сразу, пользователь попробует нажать кнопку
-                    });
+                    initRecording();
                 }
             }
             // Обновляем активную кнопку
@@ -217,20 +213,16 @@
 
         // Проверка поддержки MediaRecorder
         function checkMediaRecorderSupport() {
-            // iOS Safari не поддерживает MediaRecorder вообще
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-            
-            // Для iOS Safari всегда используем Web Audio API
-            if (isIOS || (isSafari && !window.chrome)) {
-                return false;
-            }
-            
             if (typeof MediaRecorder === 'undefined') {
                 return false;
             }
             
-            // Проверяем реальную поддержку для других браузеров
+            // Safari может иметь MediaRecorder, но не поддерживать все форматы
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            
+            if (isSafari || isIOS) {
+                // Проверяем реальную поддержку
                 try {
                     const testRecorder = new MediaRecorder(new MediaStream());
                     return testRecorder && typeof testRecorder.start === 'function';
@@ -239,75 +231,27 @@
                 }
             }
             
-        // Получение getUserMedia с поддержкой старых браузеров и iOS
-        function getUserMedia(constraints) {
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            const userAgent = navigator.userAgent;
-            
-            console.log('getUserMedia called. iOS:', isIOS, 'UserAgent:', userAgent);
-            console.log('navigator.mediaDevices:', navigator.mediaDevices);
-            console.log('navigator.mediaDevices.getUserMedia:', navigator.mediaDevices?.getUserMedia);
-            
-            // Для современных браузеров (включая iOS Safari 11+)
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                console.log('Using navigator.mediaDevices.getUserMedia');
-                return navigator.mediaDevices.getUserMedia(constraints);
-            }
-            
-            // Fallback для старых браузеров (но не для iOS, там это не работает)
-            const getUserMediaLegacy = navigator.getUserMedia ||
-                        navigator.webkitGetUserMedia ||
-                        navigator.mozGetUserMedia ||
-                        navigator.msGetUserMedia;
-                    
-            if (!getUserMediaLegacy) {
-                // Для iOS Safari, если mediaDevices нет, это означает очень старую версию
-                if (isIOS) {
-                    console.error('iOS device detected but no getUserMedia support found');
-                    throw new Error('Ваша версия iOS Safari не поддерживает запись аудио. Пожалуйста, обновите iOS до версии 11 или выше.');
-                }
-                console.error('No getUserMedia support found');
-                throw new Error('Ваш браузер не поддерживает запись аудио. Пожалуйста, используйте современный браузер (Chrome, Firefox, Safari).');
-                    }
-            
-            console.log('Using legacy getUserMedia');
-            // Обертка для legacy API
-            return new Promise((resolve, reject) => {
-                getUserMediaLegacy.call(navigator, constraints, resolve, reject);
-            });
+            return true;
         }
 
         // Инициализация записи
         async function initRecording() {
             try {
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-                const isLocalhost = location.hostname === 'localhost' || 
-                                   location.hostname === '127.0.0.1' || 
-                                   location.hostname === '0.0.0.0' ||
-                                   location.hostname.startsWith('192.168.') ||
-                                   location.hostname.startsWith('10.') ||
-                                   location.hostname.startsWith('172.');
-                
-                // На iOS getUserMedia работает только по HTTPS, кроме localhost
-                // Для других браузеров HTTP на localhost тоже работает
-                if (isIOS && location.protocol !== 'https:' && !isLocalhost) {
-                    throw new Error('Для работы микрофона на iOS требуется HTTPS соединение. Пожалуйста, откройте сайт по HTTPS или используйте localhost для разработки.');
-                }
-                
-                // Для других браузеров предупреждаем, но не блокируем на localhost
-                if (!isIOS && location.protocol !== 'https:' && !isLocalhost) {
-                    console.warn('getUserMedia рекомендуется использовать по HTTPS для безопасности');
-                }
-                
-                // Для iOS Safari используем более простые настройки аудио
-                const audioConstraints = isIOS ? {
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
-                        // Не указываем sampleRate для iOS, используем нативный
+                // Проверяем поддержку getUserMedia
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    // Fallback для старых браузеров
+                    navigator.mediaDevices = navigator.mediaDevices || {};
+                    navigator.mediaDevices.getUserMedia = navigator.mediaDevices.getUserMedia ||
+                        navigator.webkitGetUserMedia ||
+                        navigator.mozGetUserMedia ||
+                        navigator.msGetUserMedia;
+                    
+                    if (!navigator.mediaDevices.getUserMedia) {
+                        throw new Error('Ваш браузер не поддерживает запись аудио');
                     }
-                } : {
+                }
+
+                const stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
                         sampleRate: 16000,
                         channelCount: 1,
@@ -315,10 +259,7 @@
                         noiseSuppression: true,
                         autoGainControl: true
                     }
-                };
-
-                // Используем универсальную функцию getUserMedia
-                const stream = await getUserMedia(audioConstraints);
+                });
                 
                 mediaStream = stream;
                 
@@ -327,72 +268,26 @@
                     useWebAudioFallback = false;
                     await initMediaRecorder(stream);
                 } else {
-                    // Используем Web Audio API как fallback для Safari/iOS
+                    // Используем Web Audio API как fallback для Safari
                     useWebAudioFallback = true;
                     await initWebAudioRecorder(stream);
                 }
                 
             } catch (err) {
                 console.error('Microphone initialization error:', err);
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-                let errorMessage = '';
+                let errorMessage = 'Ошибка доступа к микрофону. ';
                 
-                // Проверяем, есть ли уже сообщение об ошибке в тексте ошибки
-                if (err.message && err.message.includes('не поддерживает запись аудио')) {
-                    errorMessage = err.message;
-                } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    if (isIOS) {
-                        errorMessage = 'Доступ к микрофону запрещен. Пожалуйста, разрешите доступ к микрофону в настройках Safari (Настройки > Safari > Микрофон) или нажмите на иконку микрофона в адресной строке Safari.';
-                    } else {
-                        errorMessage = 'Доступ к микрофону запрещен. Пожалуйста, разрешите доступ к микрофону в настройках браузера.';
-                    }
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    errorMessage += 'Пожалуйста, разрешите доступ к микрофону в настройках браузера.';
                 } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-                    errorMessage = 'Микрофон не найден. Проверьте подключение устройства.';
-                } else if (err.name === 'NotSupportedError' || err.name === 'NotReadableError' || err.name === 'OverconstrainedError') {
-                    const isLocalhost = location.hostname === 'localhost' || 
-                                       location.hostname === '127.0.0.1' || 
-                                       location.hostname === '0.0.0.0';
-                    if (isIOS) {
-                        // На iOS NotSupportedError обычно означает проблему с разрешениями или настройками
-                        if (isLocalhost) {
-                            errorMessage = 'Ошибка доступа к микрофону на iOS. Убедитесь, что: 1) Вы используете Safari (не Chrome), 2) Вы дали разрешение на микрофон (иконка в адресной строке), 3) Микрофон не занят другим приложением.';
+                    errorMessage += 'Микрофон не найден. Проверьте подключение устройства.';
+                } else if (err.name === 'NotSupportedError') {
+                    errorMessage += 'Ваш браузер не поддерживает запись аудио. Попробуйте использовать Chrome или Firefox.';
                 } else {
-                            errorMessage = 'Ошибка доступа к микрофону на iOS. Убедитесь, что: 1) Вы используете Safari (не Chrome), 2) Сайт открыт по HTTPS, 3) Вы дали разрешение на микрофон (иконка в адресной строке), 4) Микрофон не занят другим приложением.';
-                        }
-                    } else {
-                        errorMessage = 'Ваш браузер не поддерживает запись аудио или микрофон занят другим приложением. Попробуйте использовать Chrome или Firefox.';
-                    }
-                } else if (err.name === 'TypeError' || (err.message && err.message.includes('getUserMedia'))) {
-                    const isLocalhost = location.hostname === 'localhost' || 
-                                       location.hostname === '127.0.0.1' || 
-                                       location.hostname === '0.0.0.0';
-                    if (isIOS) {
-                        if (isLocalhost) {
-                            errorMessage = 'Ошибка инициализации микрофона на iOS. Убедитесь, что вы используете Safari и дали разрешение на доступ к микрофону.';
-                        } else {
-                            errorMessage = 'Ошибка инициализации микрофона на iOS. Убедитесь, что вы используете Safari, сайт открыт по HTTPS (не HTTP), и дали разрешение на микрофон.';
-                        }
-                    } else {
-                        errorMessage = 'Ошибка инициализации микрофона. Убедитесь, что вы используете HTTPS или localhost.';
-                    }
-                } else if (err.message && err.message.includes('Web Audio API')) {
-                    errorMessage = 'Ошибка инициализации аудио системы. Попробуйте обновить страницу и нажать кнопку микрофона еще раз.';
-                } else if (err.message) {
-                    errorMessage = err.message;
-                } else {
-                    if (isIOS) {
-                        errorMessage = 'Ошибка доступа к микрофону. Убедитесь, что вы используете Safari, дали разрешение на микрофон и сайт открыт по HTTPS.';
-                    } else {
-                        errorMessage = 'Ошибка доступа к микрофону. Попробуйте обновить страницу и нажать кнопку микрофона еще раз.';
-                    }
+                    errorMessage += err.message || 'Попробуйте обновить страницу.';
                 }
                 
                 showError(errorMessage);
-                // Сбрасываем состояние для повторной попытки
-                mediaRecorder = null;
-                audioContext = null;
-                audioWorkletNode = null;
-                mediaStream = null;
             }
         }
 
@@ -439,96 +334,41 @@
             };
         }
 
-        // Инициализация Web Audio API (для Safari и iOS)
+        // Инициализация Web Audio API (для Safari)
         async function initWebAudioRecorder(stream) {
             try {
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
                 const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                
                 if (!AudioContextClass) {
-                    const errorMsg = isIOS 
-                        ? 'Web Audio API не поддерживается. Убедитесь, что вы используете Safari и обновили iOS до последней версии.'
-                        : 'Web Audio API не поддерживается вашим браузером.';
-                    throw new Error(errorMsg);
+                    throw new Error('Web Audio API не поддерживается');
                 }
                 
-                // Для iOS нужно использовать sampleRate по умолчанию или разрешенный
-                // iOS Safari обычно поддерживает 44100 или 48000, но не 16000 напрямую
-                // Мы будем записывать с нативной частотой и ресемплировать при необходимости
-                try {
-                    audioContext = new AudioContextClass();
-                } catch (e) {
-                    console.error('Failed to create AudioContext:', e);
-                    throw new Error('Не удалось создать аудио контекст. Убедитесь, что вы используете Safari на iOS.');
-                }
-                
-                console.log('AudioContext created. State:', audioContext.state, 'Sample rate:', audioContext.sampleRate);
-                
-                // Проверяем, что контекст не приостановлен (iOS требует user gesture)
-                if (audioContext.state === 'suspended') {
-                    console.log('AudioContext is suspended, will resume on user gesture');
-                    // Не пытаемся возобновить здесь, это будет сделано при нажатии кнопки
-                }
-                
+                audioContext = new AudioContextClass({ sampleRate: 16000 });
                 const source = audioContext.createMediaStreamSource(stream);
                 
-                // Создаем ScriptProcessorNode для записи (deprecated, но работает в Safari/iOS)
-                // Используем bufferSize 4096 для лучшей производительности
+                // Создаем ScriptProcessorNode для записи (deprecated, но работает в Safari)
                 const bufferSize = 4096;
-                let processor;
-                try {
-                    processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
-                } catch (e) {
-                    console.error('Failed to create ScriptProcessor:', e);
-                    throw new Error('Не удалось создать процессор аудио. Возможно, ваша версия iOS Safari слишком старая.');
-                }
+                const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
                 
                 processor.onaudioprocess = (e) => {
-                    // Всегда записываем данные, если isRecording установлен
-                    // Проверяем isRecording в момент обработки
                     if (isRecording) {
-                        try {
                         const inputData = e.inputBuffer.getChannelData(0);
-                            // Проверяем, что данные не пустые
-                            if (inputData && inputData.length > 0) {
-                                // Копируем данные в новый буфер
                         const buffer = new Float32Array(inputData.length);
                         for (let i = 0; i < inputData.length; i++) {
                             buffer[i] = inputData[i];
                         }
                         audioBuffer.push(buffer);
-                                // Логируем периодически для отладки
-                                if (audioBuffer.length % 100 === 0) {
-                                    const totalSamples = audioBuffer.reduce((sum, buf) => sum + (buf ? buf.length : 0), 0);
-                                    console.log('Audio buffer chunks:', audioBuffer.length, 'total samples:', totalSamples);
-                                }
-                            } else {
-                                console.warn('Empty input data in onaudioprocess');
-                            }
-                        } catch (err) {
-                            console.error('Error in onaudioprocess:', err);
-                        }
                     }
                 };
                 
                 source.connect(processor);
-                // Для iOS нужно подключить к destination, иначе процессор может не работать
-                // Но используем очень тихий выход, чтобы избежать feedback
-                const gainNode = audioContext.createGain();
-                gainNode.gain.value = 0; // Отключаем звук на выходе
-                processor.connect(gainNode);
-                gainNode.connect(audioContext.destination);
+                processor.connect(audioContext.destination);
                 
-                // Сохраняем ссылки для остановки
+                // Сохраняем ссылку для остановки
                 audioWorkletNode = processor;
                 
-                console.log('Web Audio API recorder initialized for Safari/iOS. Sample rate:', audioContext.sampleRate);
+                console.log('Web Audio API recorder initialized for Safari');
             } catch (err) {
                 console.error('Web Audio API initialization error:', err);
-                // Передаем более понятное сообщение об ошибке
-                if (err.message && !err.message.includes('Web Audio API')) {
-                    throw new Error('Ошибка инициализации аудио: ' + err.message);
-                }
                 throw err;
             }
         }
@@ -547,28 +387,7 @@
             
             if (useWebAudioFallback) {
                 // Конвертируем аудио буфер в WAV для Safari
-                console.log('Converting audio buffer to WAV. Buffer chunks:', audioBuffer.length);
-                console.log('Total samples:', audioBuffer.reduce((sum, buf) => sum + (buf ? buf.length : 0), 0));
-                
-                if (!audioBuffer || audioBuffer.length === 0) {
-                    const errorMsg = 'Аудио буфер пуст. Запись не удалась. Попробуйте еще раз.';
-                    console.error(errorMsg);
-                    showError(errorMsg);
-                    status.textContent = 'Готов к работе';
-                    status.className = 'status idle';
-                    recordBtn.disabled = false;
-                    audioBuffer = [];
-                    recordingStartTime = null;
-                    return;
-                }
-                
-                try {
                 audioBlob = await convertAudioBufferToWAV();
-                    console.log('Audio blob created, size:', audioBlob.size, 'bytes');
-                } catch (convertErr) {
-                    console.error('Error converting audio buffer:', convertErr);
-                    throw new Error('Ошибка конвертации аудио: ' + convertErr.message);
-                }
                 audioBuffer = [];
             } else {
                 console.log('Recording stopped. Total chunks:', audioChunks.length);
@@ -604,7 +423,7 @@
             recordingStartTime = null;
         }
 
-        // Конвертация аудио буфера в WAV (для Safari/iOS)
+        // Конвертация аудио буфера в WAV (для Safari)
         async function convertAudioBufferToWAV() {
             if (!audioBuffer || audioBuffer.length === 0) {
                 throw new Error('Нет данных для конвертации');
@@ -616,10 +435,6 @@
                 totalLength += audioBuffer[i].length;
             }
             
-            if (totalLength === 0) {
-                throw new Error('Нет аудио данных для конвертации');
-            }
-            
             const mergedBuffer = new Float32Array(totalLength);
             let bufferOffset = 0;
             for (let i = 0; i < audioBuffer.length; i++) {
@@ -627,67 +442,13 @@
                 bufferOffset += audioBuffer[i].length;
             }
             
-            // Получаем sample rate из audioContext (может быть 44100 или 48000 на iOS)
-            const sourceSampleRate = audioContext ? audioContext.sampleRate : 44100;
-            // Отправляем оригинальную частоту - STT API поддерживает разные частоты и сам ресемплирует
-            // Это дает лучшее качество, чем ресемплинг на фронтенде
-            const sampleRate = sourceSampleRate;
-            
-            // НЕ ресемплируем на фронтенде - пусть STT API сам обработает
-            // Это дает лучшее качество распознавания
-            const audioBufferForWAV = mergedBuffer;
-            
-            // Нормализуем аудио (увеличиваем громкость если нужно)
-            let maxAmplitude = 0;
-            let sumSquares = 0;
-            for (let i = 0; i < audioBufferForWAV.length; i++) {
-                const absValue = Math.abs(audioBufferForWAV[i]);
-                maxAmplitude = Math.max(maxAmplitude, absValue);
-                sumSquares += audioBufferForWAV[i] * audioBufferForWAV[i];
-            }
-            
-            // Вычисляем RMS (среднеквадратичное значение) для оценки уровня сигнала
-            const rms = Math.sqrt(sumSquares / audioBufferForWAV.length);
-            
-            console.log(`Audio analysis: max=${maxAmplitude.toFixed(4)}, RMS=${rms.toFixed(4)}`);
-            
-            // Проверяем, есть ли реальный звук
-            if (maxAmplitude < 0.001 || rms < 0.001) {
-                throw new Error('Запись слишком тихая или пустая. Проверьте микрофон и попробуйте говорить громче.');
-            }
-            
-            // Применяем нормализацию для улучшения качества распознавания
-            // Целевой уровень: максимум около 0.7-0.8 (оставляем запас)
-            let targetMax = 0.75;
-            let gain = 1.0;
-            
-            if (maxAmplitude > 0 && maxAmplitude < targetMax) {
-                // Увеличиваем громкость до целевого уровня
-                gain = targetMax / maxAmplitude;
-                // Ограничиваем максимальное усиление до 15x (для очень тихих записей)
-                gain = Math.min(gain, 15.0);
-                
-                for (let i = 0; i < audioBufferForWAV.length; i++) {
-                    audioBufferForWAV[i] = Math.max(-1, Math.min(1, audioBufferForWAV[i] * gain));
-                }
-                console.log(`Audio normalized: max was ${maxAmplitude.toFixed(4)}, applied gain ${gain.toFixed(2)}, new max=${Math.min(maxAmplitude * gain, 1).toFixed(4)}`);
-            } else if (maxAmplitude > 0.95) {
-                // Если слишком громко, немного уменьшаем
-                gain = 0.9 / maxAmplitude;
-                for (let i = 0; i < audioBufferForWAV.length; i++) {
-                    audioBufferForWAV[i] = Math.max(-1, Math.min(1, audioBufferForWAV[i] * gain));
-                }
-                console.log(`Audio reduced: max was ${maxAmplitude.toFixed(4)}, applied gain ${gain.toFixed(2)}`);
-            } else {
-                console.log(`Audio levels OK: max=${maxAmplitude.toFixed(4)}, RMS=${rms.toFixed(4)}`);
-            }
-            
             // Конвертируем в 16-bit PCM
+            const sampleRate = 16000;
             const numChannels = 1;
             const bytesPerSample = 2;
             const blockAlign = numChannels * bytesPerSample;
             const byteRate = sampleRate * blockAlign;
-            const dataSize = audioBufferForWAV.length * blockAlign;
+            const dataSize = mergedBuffer.length * blockAlign;
             const bufferSize = 44 + dataSize;
             const arrayBuffer = new ArrayBuffer(bufferSize);
             const view = new DataView(arrayBuffer);
@@ -704,7 +465,7 @@
             writeString(8, 'WAVE');
             writeString(12, 'fmt ');
             view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true); // PCM format
+            view.setUint16(20, 1, true);
             view.setUint16(22, numChannels, true);
             view.setUint32(24, sampleRate, true);
             view.setUint32(28, byteRate, true);
@@ -713,17 +474,13 @@
             writeString(36, 'data');
             view.setUint32(40, dataSize, true);
             
-            // Данные - конвертируем Float32 в Int16
+            // Данные
             let offset = 44;
-            for (let i = 0; i < audioBufferForWAV.length; i++) {
-                const sample = Math.max(-1, Math.min(1, audioBufferForWAV[i]));
-                // Конвертируем в 16-bit integer
-                const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-                view.setInt16(offset, intSample, true);
+            for (let i = 0; i < mergedBuffer.length; i++) {
+                const sample = Math.max(-1, Math.min(1, mergedBuffer[i]));
+                view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
                 offset += 2;
             }
-            
-            console.log(`WAV created: sample_rate=${sampleRate}Hz, samples=${audioBufferForWAV.length}, size=${bufferSize} bytes`);
             
             return new Blob([arrayBuffer], { type: 'audio/wav' });
         }
@@ -743,47 +500,22 @@
         }
 
         // Toggle запись по клику
-        async function toggleRecording() {
+        function toggleRecording() {
             // Проверяем, инициализирован ли микрофон
             if ((!mediaRecorder && !useWebAudioFallback) || (useWebAudioFallback && !audioContext)) {
-                // Для iOS важно инициализировать в контексте user gesture
-                showError('Инициализация микрофона...');
-                initRecording().then(() => {
-                    // После инициализации начинаем запись
-                    setTimeout(async () => {
-                        if (useWebAudioFallback) {
-                            if (!isRecording) {
-                                await startWebAudioRecording();
-                            }
-                        } else {
-                            if (mediaRecorder && mediaRecorder.state === 'inactive' && !isRecording) {
-                                startMediaRecorderRecording();
-                            }
-                        }
-                    }, 100);
-                }).catch(err => {
+                showError('Микрофон не инициализирован. Инициализация...');
+                initRecording().catch(err => {
                     console.error('Failed to initialize recording:', err);
-                    showError('Не удалось инициализировать микрофон. Попробуйте еще раз.');
                 });
                 return;
             }
             
             if (useWebAudioFallback) {
-                // Для Safari/iOS используем Web Audio API
+                // Для Safari используем Web Audio API
                 if (!isRecording) {
-                    // Убеждаемся, что audioContext активен (iOS требует user gesture)
-                    if (audioContext && audioContext.state === 'suspended') {
-                        audioContext.resume().then(async () => {
-                            await startWebAudioRecording();
-                        }).catch(err => {
-                            console.error('Failed to resume audio context:', err);
-                            showError('Не удалось активировать микрофон. Попробуйте еще раз.');
-                        });
+                    startWebAudioRecording();
                 } else {
-                        await startWebAudioRecording();
-                    }
-                } else {
-                    await stopWebAudioRecording();
+                    stopWebAudioRecording();
                 }
             } else {
                 // Для других браузеров используем MediaRecorder
@@ -804,12 +536,6 @@
             errorDiv.classList.remove('show');
             isRecording = true;
             console.log('Recording started (MediaRecorder)');
-            
-            // Скрываем предыдущий ответ
-            const voiceResponseContainer = document.getElementById('voiceResponseContainer');
-            if (voiceResponseContainer) {
-                voiceResponseContainer.style.display = 'none';
-            }
             
             recordingStartTime = Date.now();
             recordingTimer = setInterval(() => {
@@ -839,55 +565,24 @@
             recordingStartTime = null;
         }
 
-        // Начало записи через Web Audio API (Safari/iOS)
-        async function startWebAudioRecording() {
+        // Начало записи через Web Audio API (Safari)
+        function startWebAudioRecording() {
             if (!audioContext || !audioWorkletNode) {
                 showError('Аудио система не инициализирована. Обновите страницу.');
                 return;
             }
             
-            // Убеждаемся, что audioContext активен
-            if (audioContext.state === 'suspended') {
-                try {
-                    await audioContext.resume();
-                    console.log('AudioContext resumed, state:', audioContext.state);
-                } catch (err) {
-                    console.error('Failed to resume audio context:', err);
-                    showError('Не удалось активировать микрофон. Попробуйте еще раз.');
-                    return;
-                }
-            }
-            
-            // Очищаем буфер перед началом записи
             audioBuffer = [];
-            console.log('Starting recording. AudioContext state:', audioContext.state);
-            console.log('AudioContext sample rate:', audioContext.sampleRate);
-            
-            // Устанавливаем флаг записи ДО начала записи
-            isRecording = true;
-            console.log('isRecording set to:', isRecording);
-            
             recordBtn.classList.add('recording');
             status.className = 'status recording';
             errorDiv.classList.remove('show');
-            
-            // Скрываем предыдущий ответ
-            const voiceResponseContainer = document.getElementById('voiceResponseContainer');
-            if (voiceResponseContainer) {
-                voiceResponseContainer.style.display = 'none';
-            }
-            
-            console.log('Recording started (Web Audio API). Sample rate:', audioContext.sampleRate);
+            isRecording = true;
+            console.log('Recording started (Web Audio API)');
             
             recordingStartTime = Date.now();
             recordingTimer = setInterval(() => {
                 const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
                 status.textContent = `Запись... ${elapsed} сек`;
-                // Периодически проверяем, что буфер заполняется
-                if (elapsed > 0 && elapsed % 2 === 0) {
-                    const totalSamples = audioBuffer.reduce((sum, buf) => sum + (buf && buf.length ? buf.length : 0), 0);
-                    console.log('Recording check: buffer chunks:', audioBuffer.length, 'samples:', totalSamples);
-                }
             }, 100);
         }
 
@@ -903,27 +598,7 @@
             const recordingDuration = recordingStartTime ? Math.floor((Date.now() - recordingStartTime) / 1000) : 0;
             console.log('Recording duration:', recordingDuration, 'seconds');
             
-            // Проверяем буфер перед остановкой
-            console.log('Audio buffer chunks before stop:', audioBuffer.length);
-            const totalSamplesBefore = audioBuffer.reduce((sum, buf) => sum + (buf && buf.length ? buf.length : 0), 0);
-            console.log('Total samples in buffer before stop:', totalSamplesBefore);
-            
-            // Небольшая задержка, чтобы последние данные попали в буфер
-            // Важно: НЕ останавливаем isRecording сразу, даем время для последних данных
-            await new Promise(resolve => setTimeout(resolve, 200));
-            
-            // Теперь останавливаем запись
             isRecording = false;
-            console.log('isRecording set to false');
-            
-            // Еще одна небольшая задержка для обработки последних данных процессором
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-            // Проверяем буфер после остановки
-            console.log('Audio buffer chunks after stop:', audioBuffer.length);
-            const totalSamplesAfter = audioBuffer.reduce((sum, buf) => sum + (buf && buf.length ? buf.length : 0), 0);
-            console.log('Total samples in buffer after stop:', totalSamplesAfter);
-            
             recordBtn.classList.remove('recording');
             status.textContent = 'Обработка...';
             status.className = 'status processing';
@@ -1024,116 +699,10 @@
             return arrayBuffer;
         }
 
-        // Отправка через XMLHttpRequest (fallback для iOS)
-        function sendViaXHR(url, formData, timeoutId) {
-            return new Promise((resolve, reject) => {
-                console.log('XHR: Creating XMLHttpRequest...');
-                const xhr = new XMLHttpRequest();
-                
-                xhr.onload = function() {
-                    console.log('XHR: onload fired, status:', xhr.status);
-                    if (timeoutId) {
-                        clearTimeout(timeoutId);
-                    }
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        try {
-                            const response = {
-                                ok: true,
-                                status: xhr.status,
-                                statusText: xhr.statusText,
-                                json: async () => JSON.parse(xhr.responseText),
-                                text: async () => xhr.responseText,
-                                headers: {
-                                    get: (name) => xhr.getResponseHeader(name),
-                                    entries: () => {
-                                        const headers = {};
-                                        const headerStr = xhr.getAllResponseHeaders();
-                                        const headerPairs = headerStr.split('\r\n');
-                                        for (let i = 0; i < headerPairs.length; i++) {
-                                            const headerPair = headerPairs[i];
-                                            if (headerPair) {
-                                                const [key, value] = headerPair.split(': ');
-                                                headers[key.toLowerCase()] = value;
-                                            }
-                                        }
-                                        return Object.entries(headers);
-                                    }
-                                }
-                            };
-                            console.log('XHR: Resolving with response');
-                            resolve(response);
-                        } catch (e) {
-                            console.error('XHR: Error parsing response:', e);
-                            reject(new Error('Failed to parse XHR response: ' + e.message));
-                        }
-                    } else {
-                        console.error('XHR: Error status:', xhr.status);
-                        reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
-                    }
-                };
-                
-                xhr.onerror = function() {
-                    console.error('XHR: onerror fired');
-                    if (timeoutId) {
-                        clearTimeout(timeoutId);
-                    }
-                    reject(new Error('XHR network error'));
-                };
-                
-                xhr.ontimeout = function() {
-                    console.error('XHR: ontimeout fired');
-                    if (timeoutId) {
-                        clearTimeout(timeoutId);
-                    }
-                    reject(new Error('XHR timeout'));
-                };
-                
-                console.log('XHR: Opening connection to:', url);
-                xhr.open('POST', url);
-                xhr.timeout = 60000;
-                console.log('XHR: Sending request...');
-                xhr.send(formData);
-            });
-        }
-
         // Обработка аудио
         async function processAudio(audioBlob) {
-            // Визуальная индикация начала обработки
-            if (status) {
-                status.textContent = 'Начало обработки аудио...';
-                status.className = 'status processing';
-            }
-            
             try {
-                console.log('=== processAudio started ===');
                 console.log('Processing audio. Original size:', audioBlob.size, 'bytes, type:', audioBlob.type);
-                console.log('API_URL:', API_URL);
-                console.log('Current location:', window.location.href);
-                console.log('Protocol:', window.location.protocol);
-                console.log('Host:', window.location.host);
-                
-                // Проверяем, что audioBlob валиден
-                if (!audioBlob || !audioBlob.size || audioBlob.size === 0) {
-                    throw new Error('Аудио данные пусты или невалидны');
-                }
-                
-                // Проверяем доступность сервера перед отправкой (только для диагностики)
-                const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
-                if (isIOSDevice) {
-                    console.log('iOS device detected');
-                    console.log('Using HTTPS:', window.location.protocol === 'https:');
-                    
-                    // Пробуем проверить доступность API
-                    try {
-                        const healthCheck = await fetch(`${API_URL.replace('/api', '')}/api/health`, {
-                            method: 'GET',
-                            credentials: 'omit'
-                        });
-                        console.log('Health check response:', healthCheck.status, healthCheck.statusText);
-                    } catch (healthErr) {
-                        console.warn('Health check failed (this is OK, continuing anyway):', healthErr.message);
-                    }
-                }
                 
                 // Конвертируем в WAV если нужно
                 let wavBlob = audioBlob;
@@ -1148,183 +717,21 @@
                     throw new Error('Запись слишком короткая. Пожалуйста, говорите дольше (минимум 1 секунда).');
                 }
                 
-                // Проверяем URL перед отправкой
-                if (!API_URL || !API_URL.includes('/api')) {
-                    throw new Error('Ошибка конфигурации: неправильный URL API');
-                }
-                
-                // Проверяем, что blob валиден
-                if (!wavBlob || wavBlob.size < 1024) {
-                    throw new Error('Ошибка: аудио данные не готовы для отправки');
-                }
-                
                 const formData = new FormData();
                 formData.append('audio', wavBlob, 'recording.wav');
                 console.log('Sending audio to server. Size:', wavBlob.size, 'bytes');
-                console.log('FormData created, sending to:', `${API_URL}/voice-assistant`);
-                console.log('FormData entries count:', formData.has('audio') ? 1 : 0);
-                
-                // Устанавливаем статус перед отправкой
-                status.textContent = 'Подготовка к отправке...';
-                status.className = 'status processing';
-                
-                // Небольшая задержка для обновления UI на iOS
-                await new Promise(resolve => setTimeout(resolve, 100));
-                
-                // Устанавливаем статус отправки
-                status.textContent = 'Отправка на сервер...';
-                
-                // Проверяем, что FormData создан правильно
-                if (!formData || !formData.has('audio')) {
-                    throw new Error('Ошибка подготовки данных для отправки: FormData не содержит audio');
-                }
-                
-                // Создаем AbortController для таймаута (fallback для старых браузеров)
-                let abortController = null;
-                let timeoutId = null;
-                if (typeof AbortController !== 'undefined') {
-                    abortController = new AbortController();
-                    // Устанавливаем таймаут 60 секунд
-                    timeoutId = setTimeout(() => {
-                        if (abortController) {
-                            abortController.abort();
-                        }
-                    }, 60000);
-                }
-                
-                const fetchOptions = {
-                    method: 'POST',
-                    body: formData,
-                    // Не устанавливаем Content-Type, браузер сам установит с boundary для FormData
-                    // Добавляем credentials для работы с HTTPS
-                    credentials: 'omit',
-                    // Добавляем signal для возможности отмены
-                    signal: abortController ? abortController.signal : undefined
-                };
-                
-                console.log('Fetch options:', {
-                    method: fetchOptions.method,
-                    hasBody: !!fetchOptions.body,
-                    credentials: fetchOptions.credentials
-                });
-                
-                // Обновляем статус перед отправкой
-                status.textContent = 'Отправка запроса...';
-                
-                let response;
-                try {
-                    const requestUrl = `${API_URL}/voice-assistant`;
-                    console.log('Initiating fetch request to:', requestUrl);
-                    console.log('Request will be sent now...');
-                    
-                    // Показываем пользователю, что запрос отправляется
-                    status.textContent = 'Отправка запроса на сервер...';
-                    
-                    // Для iOS добавляем дополнительную проверку
-                    if (isIOSDevice) {
-                        console.log('iOS device: attempting to send request');
-                        // Убеждаемся, что мы на HTTPS
-                        if (window.location.protocol !== 'https:') {
-                            throw new Error('На iOS требуется HTTPS соединение для отправки аудио');
-                        }
-                    }
-                    
-                    // Для iOS используем XMLHttpRequest напрямую, так как fetch может блокироваться
-                    if (isIOSDevice && typeof XMLHttpRequest !== 'undefined') {
-                        console.log('iOS: Using XMLHttpRequest directly for better compatibility');
-                        status.textContent = 'Отправка через альтернативный метод...';
-                        response = await sendViaXHR(requestUrl, formData, timeoutId);
-                        console.log('XHR request completed');
-                    } else {
-                        // Для других браузеров используем fetch
-                        console.log('=== ABOUT TO CALL FETCH ===');
-                        console.log('About to call fetch()...');
-                        console.log('URL:', requestUrl);
-                        console.log('Options:', JSON.stringify({
-                            method: fetchOptions.method,
-                            hasBody: !!fetchOptions.body,
-                            hasSignal: !!fetchOptions.signal
-                        }));
-                        
-                        const fetchStartTime = Date.now();
-                        console.log('Calling fetch() at:', new Date().toISOString());
-                        
-                        // Вызываем fetch
-                        try {
-                            const fetchPromise = fetch(requestUrl, fetchOptions);
-                            console.log('Fetch promise created, waiting for response...');
-                            
-                            response = await fetchPromise;
-                            
-                            const fetchDuration = Date.now() - fetchStartTime;
-                            console.log('Fetch completed in', fetchDuration, 'ms');
-                            console.log('Response status:', response.status);
-                            console.log('=== FETCH COMPLETED ===');
-                        } catch (fetchErr) {
-                            console.error('Fetch failed, error:', fetchErr);
-                            // Пробуем XMLHttpRequest как fallback
-                            if (typeof XMLHttpRequest !== 'undefined') {
-                                console.log('Trying XMLHttpRequest as fallback...');
-                                status.textContent = 'Попытка альтернативного способа отправки...';
-                                response = await sendViaXHR(requestUrl, formData, timeoutId);
-                                console.log('XHR request completed');
-                            } else {
-                                throw fetchErr;
-                            }
-                        }
-                    }
-                    
-                    // Очищаем таймаут если запрос успешен
-                    if (timeoutId) {
-                        clearTimeout(timeoutId);
-                    }
-                    
-                    // Обновляем статус после получения ответа
-                    status.textContent = 'Ответ получен, обработка...';
-                } catch (err) {
-                    // Очищаем таймаут при ошибке
-                    if (timeoutId) {
-                        clearTimeout(timeoutId);
-                    }
-                    console.error('Fetch error caught:', err);
-                    console.error('Error name:', err.name);
-                    console.error('Error message:', err.message);
-                    console.error('Error stack:', err.stack);
-                    
-                    // Формируем понятное сообщение об ошибке для пользователя
-                    let userErrorMessage = 'Ошибка отправки запроса';
-                    
-                    // Более детальная обработка ошибок для iOS
-                    if (err.name === 'TypeError' && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
-                        userErrorMessage = `Не удалось подключиться к серверу. Возможные причины:\n1. Сервер не запущен\n2. Проблема с HTTPS соединением\n3. Сертификат не принят в браузере\n\nПопробуйте обновить страницу и принять сертификат безопасности.`;
-                    } else if (err.name === 'AbortError' || err.name === 'TimeoutError') {
-                        userErrorMessage = 'Превышено время ожидания ответа от сервера. Попробуйте еще раз.';
-                    } else if (err.name === 'TypeError') {
-                        userErrorMessage = `Ошибка сети: ${err.message || 'Не удалось отправить запрос'}. Проверьте подключение к интернету и доступность сервера.`;
-                    } else {
-                        userErrorMessage = `Ошибка: ${err.message || err.name || 'Неизвестная ошибка'}`;
-                    }
-                    
-                    // Пробрасываем ошибку дальше - она будет обработана во внешнем catch
-                    throw new Error(userErrorMessage);
-                }
 
-                console.log('Response received. Status:', response.status, response.statusText);
-                console.log('Response headers:', [...response.headers.entries()]);
+                const response = await fetch(`${API_URL}/voice-assistant`, {
+                    method: 'POST',
+                    body: formData
+                });
 
                 if (!response.ok) {
                     let errorMessage = 'Ошибка обработки запроса';
-                    let errorDetails = null;
                     try {
-                        const errorText = await response.text();
-                        console.error('Error response text:', errorText);
-                        try {
-                            errorDetails = JSON.parse(errorText);
-                            errorMessage = errorDetails.error || errorDetails.details || errorMessage;
-                            console.error('Server error (parsed):', errorDetails);
-                        } catch (e) {
-                            errorMessage = errorText || `HTTP ${response.status}: ${response.statusText}`;
-                        }
+                        const error = await response.json();
+                        errorMessage = error.error || error.details || errorMessage;
+                        console.error('Server error:', error);
                     } catch (e) {
                         errorMessage = `HTTP ${response.status}: ${response.statusText}`;
                         console.error('Failed to parse error response:', e);
@@ -1333,25 +740,6 @@
                 }
 
                 const result = await response.json();
-                console.log('Response received successfully. Audio length:', result.audio ? result.audio.length : 0);
-                console.log('Response text:', result.text);
-                console.log('Response reply:', result.reply);
-
-                // Отображаем текстовый ответ, если он есть
-                const voiceResponseContainer = document.getElementById('voiceResponseContainer');
-                const voiceResponseText = document.getElementById('voiceResponseText');
-                
-                if (result.reply && voiceResponseContainer && voiceResponseText) {
-                    // Конвертируем markdown заголовки в HTML
-                    const htmlReply = convertMarkdownToHtml(result.reply);
-                    voiceResponseText.innerHTML = htmlReply;
-                    voiceResponseContainer.style.display = 'block';
-                } else if (result.text && voiceResponseContainer && voiceResponseText) {
-                    // Если нет reply, но есть text (распознанный текст), показываем его
-                    const htmlText = convertMarkdownToHtml(result.text);
-                    voiceResponseText.innerHTML = htmlText;
-                    voiceResponseContainer.style.display = 'block';
-                }
 
                 // Конвертируем base64 обратно в blob и автоматически воспроизводим
                 if (result.audio) {
@@ -1371,23 +759,10 @@
                     recordBtn.disabled = false;
                 }
             } catch (err) {
-                console.error('Error in processAudio:', err);
-                console.error('Error stack:', err.stack);
                 isRecording = false;
-                let errorMessage = err.message || 'Неизвестная ошибка';
-                
-                // Более детальные сообщения об ошибках
-                if (err.message && (err.message.includes('network') || err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
-                    errorMessage = 'Ошибка подключения к серверу. Проверьте, что сервер запущен и доступен по адресу ' + API_URL;
-                } else if (err.message && err.message.includes('CORS')) {
-                    errorMessage = 'Ошибка CORS. Сервер не разрешает запросы с этого домена.';
-                } else if (err.message && err.message.includes('timeout')) {
-                    errorMessage = 'Превышено время ожидания ответа от сервера.';
-                }
-                
-                showError(errorMessage);
-                status.textContent = 'Ошибка';
-                status.className = 'status error';
+                showError(err.message);
+                status.textContent = 'Готов к работе';
+                status.className = 'status idle';
                 recordBtn.disabled = false;
                 recordBtn.classList.remove('recording');
             }
@@ -1523,30 +898,11 @@
         
         // Показ ошибки
         function showError(message) {
-            // Убеждаемся, что errorDiv существует
-            if (!errorDiv) {
-                console.error('Error div not found! Message:', message);
-                // Показываем через alert как fallback
-                alert('Ошибка: ' + message);
-                return;
-            }
-            
-            // Заменяем переносы строк на пробелы для отображения
-            const displayMessage = message.replace(/\n/g, ' ');
-            errorDiv.textContent = 'Ошибка: ' + displayMessage;
+            errorDiv.textContent = 'Ошибка: ' + message;
             errorDiv.classList.add('show');
-            
-            // Показываем ошибку дольше для важных сообщений
-            const timeout = message.includes('сервер') || message.includes('подключ') ? 10000 : 5000;
-            
             setTimeout(() => {
-                if (errorDiv) {
                 errorDiv.classList.remove('show');
-                }
-            }, timeout);
-            
-            // Также логируем в консоль
-            console.error('Error shown to user:', message);
+            }, 5000);
         }
 
         // Версия приложения для предотвращения кэширования
